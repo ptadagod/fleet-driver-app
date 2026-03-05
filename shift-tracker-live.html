@@ -353,12 +353,34 @@ var bowlTimers={};
 // Auth
 auth.onAuthStateChanged(function(user){
   if(!user){window.location.href='login.html';return;}
-  db.ref('users/'+user.uid).once('value').then(function(snap){
+  // Give Firebase a moment to fully resolve auth token before hitting DB
+  user.getIdToken(true).then(function(){
+    return db.ref('users/'+user.uid).once('value');
+  }).then(function(snap){
     var u=snap.val();
-    if(!u||!['admin','dispatcher'].includes(u.role)){
+    // If user record missing, create a basic one from auth (handles admin bootstrap timing)
+    if(!u){
+      // Check if this is the admin email
+      if(user.email==='admin@fleetops.local'){
+        return db.ref('users/'+user.uid).set({
+          name:'Admin',email:user.email,role:'admin',approved:true,createdAt:Date.now()
+        }).then(function(){
+          document.getElementById('admin-name').textContent='Admin';
+          if(!dbStarted)startDb();
+        });
+      }
+      auth.signOut();window.location.href='login.html';return;
+    }
+    if(!['admin','dispatcher'].includes(u.role)){
       auth.signOut();window.location.href='login.html';return;
     }
     document.getElementById('admin-name').textContent=u.name||user.email;
+    if(!dbStarted)startDb();
+  }).catch(function(err){
+    console.error('Auth/DB error:',err);
+    // DB rules may be blocking — still try to start if user is authenticated
+    document.getElementById('connText').textContent='DB error: '+err.code;
+    document.getElementById('admin-name').textContent=user.email;
     if(!dbStarted)startDb();
   });
 });
