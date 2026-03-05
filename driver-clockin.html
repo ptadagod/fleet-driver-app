@@ -685,6 +685,14 @@ function setupReturnForm(){
   document.getElementById('f-return-notes').value='';
 }
 
+// Yard addresses for ETA calculation
+var YARD_ADDRESSES={
+  'east-tamaki':'20 Jarvis Way, Ōtara, Auckland 2019',
+  'drury':'41 Bill Stevenson Drive, Drury 2579',
+  'ranui':'7 Airdrie Road, Ranui, Auckland 0612',
+  'penrose':'97 Gavin St, Mount Wellington, Auckland 1060'
+};
+
 function submitReturn(){
   var volume=document.getElementById('f-volume').value.trim();
   var yardId=document.getElementById('f-return-yard').value;
@@ -693,6 +701,7 @@ function submitReturn(){
   var yardNames={'east-tamaki':'East Tamaki (CE)','drury':'Drury (CD)','ranui':'Ranui (CR)','penrose':'Penrose (CP)'};
   var btn=document.getElementById('return-submit-btn');
   btn.disabled=true;
+  btn.textContent='Calculating ETA…';
 
   var departureTime=currentJob?currentJob.departureTime:Date.now();
   var bowlDuration=departureTime?Math.floor((Date.now()-departureTime)/1000):0;
@@ -707,16 +716,50 @@ function submitReturn(){
     lat:lastLoc?lastLoc.lat:null,lng:lastLoc?lastLoc.lng:null,
     departureTime:departureTime,
     bowlDurationSeconds:bowlDuration,
-    submittedAt:Date.now(),status:'pending'
+    submittedAt:Date.now(),status:'pending',
+    etaMinutes:null,etaText:null,etaTimestamp:null
   };
 
-  db.ref('returns').push(report).then(function(){
-    if(currentJob) db.ref('jobs/'+activeDriver.id).update({status:'return',returnSubmittedAt:Date.now()});
-    document.getElementById('success-icon').textContent='🪣';
-    document.getElementById('success-title').textContent='Return Reported!';
-    document.getElementById('success-sub').innerHTML='Supervisor has been notified.<br>'+volume+'m³ returning to '+yardNames[yardId];
-    goTo('success');
-  }).catch(function(){btn.disabled=false;showToast('⚠ Failed. Try again.');});
+  function saveReport(etaMinutes, etaText, etaTimestamp){
+    report.etaMinutes=etaMinutes||null;
+    report.etaText=etaText||null;
+    report.etaTimestamp=etaTimestamp||null;
+    db.ref('returns').push(report).then(function(){
+      if(currentJob) db.ref('jobs/'+activeDriver.id).update({
+        status:'return',returnSubmittedAt:Date.now(),
+        etaText:etaText||null,etaTimestamp:etaTimestamp||null
+      });
+      document.getElementById('success-icon').textContent='🪣';
+      document.getElementById('success-title').textContent='Return Reported!';
+      var etaLine=etaText?'<br>ETA: <strong>'+etaText+'</strong>':'';
+      document.getElementById('success-sub').innerHTML='Supervisor has been notified.<br>'+volume+'m³ returning to '+yardNames[yardId]+etaLine;
+      goTo('success');
+    }).catch(function(){btn.disabled=false;btn.textContent='📤 SEND RETURN REPORT';showToast('⚠ Failed. Try again.');});
+  }
+
+  // Try to get ETA via Directions API if we have GPS
+  if(lastLoc && window.google && YARD_ADDRESSES[yardId]){
+    var directionsService=new google.maps.DirectionsService();
+    directionsService.route({
+      origin:{lat:lastLoc.lat,lng:lastLoc.lng},
+      destination:YARD_ADDRESSES[yardId],
+      travelMode:google.maps.TravelMode.DRIVING
+    }, function(result, status){
+      if(status==='OK'){
+        var leg=result.routes[0].legs[0];
+        var secs=leg.duration.value;
+        var etaMins=Math.ceil(secs/60);
+        var etaArrival=new Date(Date.now()+secs*1000);
+        var etaTimeStr=etaArrival.toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'});
+        saveReport(etaMins, leg.duration.text+' ('+etaTimeStr+')', etaArrival.getTime());
+      } else {
+        // No ETA available, save anyway
+        saveReport(null, null, null);
+      }
+    });
+  } else {
+    saveReport(null, null, null);
+  }
 }
 
 function submitIssue(){
