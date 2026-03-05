@@ -343,6 +343,7 @@ select.field-input option{background:#13161e;}
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBt_8TZ4cBONkK_OSJurYnBCJSm2Zpi8uc&callback=initDriverMap" async defer></script>
 <script>
@@ -355,10 +356,9 @@ firebase.initializeApp({
   messagingSenderId:"276983000908",
   appId:"1:276983000908:web:7948d3ccab92359795e9e9"
 });
-var db=firebase.database();
-
-// Auth gate — must be logged in as driver
-// No Firebase Auth for drivers — PIN based
+var auth=firebase.auth(), db=firebase.database();
+// Drivers use anonymous Firebase auth so DB rules pass — PIN is the real identity check
+auth.signInAnonymously().catch(function(err){console.warn('Anon auth:',err.message);});
 
 var YARDS = [
   {id:'east-tamaki',name:'East Tamaki',code:'CE',address:'20 Jarvis Way, Ōtara, Auckland 2019',drivers:[
@@ -415,7 +415,7 @@ function goTo(screen){
   if(screen==='yard'||screen==='driver')stopLocation();
 }
 
-function logout(){stopLocation();localStorage.removeItem('fst_session');activeYard=null;activeDriver=null;goTo('yard');}
+function logout(){stopLocation();localStorage.removeItem('fst_session');activeYard=null;activeDriver=null;if(auth.currentUser)auth.signOut();goTo('yard');}
 
 // Yard screen
 function renderYards(){
@@ -480,17 +480,20 @@ function pinDelete(){
 function checkPin(){
   var correct=activeDriver.fleet+'1';
   if(pinEntry===correct){
-    // PIN correct — save session and go to clock
-    localStorage.setItem('fst_session',JSON.stringify({yardId:activeYard.id,driverId:activeDriver.id}));
-    goTo('clock');
+    // PIN correct — ensure anonymous auth then go to clock
+    var proceed=function(){
+      localStorage.setItem('fst_session',JSON.stringify({yardId:activeYard.id,driverId:activeDriver.id}));
+      goTo('clock');
+    };
+    if(auth.currentUser){
+      proceed();
+    } else {
+      auth.signInAnonymously().then(proceed).catch(function(){proceed();});
+    }
   } else {
-    // Wrong PIN — shake dots red, clear after delay
     for(var i=0;i<4;i++) document.getElementById('pd'+i).className='pin-dot error';
     document.getElementById('pin-error').textContent='Incorrect PIN. Try again.';
-    setTimeout(function(){
-      pinEntry='';
-      updatePinDots();
-    },900);
+    setTimeout(function(){pinEntry='';updatePinDots();},900);
   }
 }
 
