@@ -190,7 +190,7 @@ footer{margin-top:40px;text-align:center;font-family:'DM Mono',monospace;font-si
 
 <!-- Login -->
 <!-- App -->
-<div id="app" style="display:block;">
+<div id="app" style="display:none;">
   <div class="top-bar">
     <div class="tab-bar-inner">
       <button class="tab-btn active" onclick="switchTab('list')" id="tab-list">📋 Shifts</button>
@@ -350,36 +350,31 @@ var mapInstance=null,mapMarkers={},yardMarkers={},mapInfoWindow=null;
 var dbStarted=false,notifTimer=null;
 var bowlTimers={};
 
-// Auth
+// Auth — simple and clean
 auth.onAuthStateChanged(function(user){
   if(!user){window.location.href='login.html';return;}
-  // Give Firebase a moment to fully resolve auth token before hitting DB
-  user.getIdToken(true).then(function(){
-    return db.ref('users/'+user.uid).once('value');
-  }).then(function(snap){
+  db.ref('users/'+user.uid).once('value').then(function(snap){
     var u=snap.val();
-    // If user record missing, create a basic one from auth (handles admin bootstrap timing)
     if(!u){
-      // Check if this is the admin email
+      // Admin bootstrap: user exists in Auth but not DB yet
       if(user.email==='admin@fleetops.local'){
-        return db.ref('users/'+user.uid).set({
-          name:'Admin',email:user.email,role:'admin',approved:true,createdAt:Date.now()
-        }).then(function(){
-          document.getElementById('admin-name').textContent='Admin';
-          if(!dbStarted)startDb();
-        });
+        u={name:'Admin',role:'admin',approved:true};
+        db.ref('users/'+user.uid).set({name:'Admin',email:user.email,role:'admin',approved:true,createdAt:Date.now()});
+      } else {
+        auth.signOut();window.location.href='login.html';return;
       }
-      auth.signOut();window.location.href='login.html';return;
     }
     if(!['admin','dispatcher'].includes(u.role)){
       auth.signOut();window.location.href='login.html';return;
     }
+    // Show app
+    document.getElementById('app').style.display='block';
     document.getElementById('admin-name').textContent=u.name||user.email;
     if(!dbStarted)startDb();
   }).catch(function(err){
-    console.error('Auth/DB error:',err);
-    // DB rules may be blocking — still try to start if user is authenticated
-    document.getElementById('connText').textContent='DB error: '+err.code;
+    // DB read failed — if user is authed just start anyway
+    console.warn('users read failed:',err.message);
+    document.getElementById('app').style.display='block';
     document.getElementById('admin-name').textContent=user.email;
     if(!dbStarted)startDb();
   });
@@ -389,7 +384,13 @@ function signOut(){auth.signOut();window.location.href='login.html';}
 // DB
 function startDb(){
   dbStarted=true;
-  db.ref('shifts').on('value',function(s){liveShifts=s.val()||{};document.getElementById('connDot').className='conn-dot on';document.getElementById('connText').textContent='Live';renderList();updateMapMarkers();});
+  // Real connection status — fires immediately when connected
+  db.ref('.info/connected').on('value',function(snap){
+    var connected=snap.val()===true;
+    document.getElementById('connDot').className='conn-dot '+(connected?'on':'off');
+    document.getElementById('connText').textContent=connected?'Live':'Reconnecting…';
+  });
+  db.ref('shifts').on('value',function(s){liveShifts=s.val()||{};renderList();updateMapMarkers();});
   db.ref('locations').on('value',function(s){liveLocations=s.val()||{};updateMapMarkers();renderList();});
   db.ref('jobs').on('value',function(s){liveJobs=s.val()||{};renderList();updateMapMarkers();});
   db.ref('returns').on('value',function(s){
@@ -668,11 +669,13 @@ document.getElementById('searchInput').addEventListener('input',function(e){sear
 // Returns
 function renderReturns(){
   var list=Object.entries(liveReturns).sort(function(a,b){return b[1].submittedAt-a[1].submittedAt;});
+  var container=document.getElementById('returns-list');
   if(list.length===0){
-    document.getElementById('returns-list').innerHTML='<div class="empty-state"><div class="emoji">🪣</div>No return concrete reports yet.</div>';
+    container.innerHTML='<div class="empty-state"><div class="emoji">🪣</div>No return concrete reports yet.</div>';
     return;
   }
-  document.getElementById('returns-list').innerHTML=list.map(function(entry,i){
+  container.innerHTML='';
+  list.forEach(function(entry,i){
     var key=entry[0],r=entry[1];
     var acked=r.status==='acknowledged';
     var t=new Date(r.submittedAt);
@@ -680,7 +683,21 @@ function renderReturns(){
     var bowlSecs=r.bowlDurationSeconds||0;
     var bh=Math.floor(bowlSecs/3600),bm=Math.floor((bowlSecs%3600)/60),bs=bowlSecs%60;
     var bowlStr=pad(bh)+':'+pad(bm)+':'+pad(bs);
-    // ETA block
+
+    var card=document.createElement('div');
+    card.className='return-card'+(acked?' acknowledged':'');
+    card.style.animationDelay=(i*.05)+'s';
+
+    var topHtml='<div class="rc-top">'+
+      '<div><div class="rc-driver">'+r.driverName+'</div><div class="rc-fleet">Fleet #'+r.fleet+' · '+(r.fromYardName||'')+'</div></div>'+
+      '<div class="rc-time">'+timeStr+'</div></div>';
+
+    var pillHtml='<div class="rc-pills">'+
+      '<div class="rc-pill vol">🪣 '+r.volume+'m³</div>'+
+      '<div class="rc-pill yard">→ '+(r.returningToName||'')+'</div>'+
+      (r.docket&&r.docket!=='—'?'<div class="rc-pill" style="color:var(--muted);border-color:var(--border)">Docket '+r.docket+'</div>':'')+
+      '</div>';
+
     var etaHtml='';
     if(!acked&&r.etaTimestamp){
       var minsLeft=Math.max(0,Math.ceil((r.etaTimestamp-Date.now())/60000));
@@ -689,45 +706,57 @@ function renderReturns(){
       etaHtml='<div class="eta-card"><div>'+
         '<div class="eta-label">🚛 Estimated Arrival</div>'+
         '<div class="eta-time" id="eta-cd-'+key+'">'+etaDisplay+'</div>'+
-        '<div class="eta-live">Due '+etaTimeStr+' · '+r.returningToName+'</div>'+
-      '</div></div>';
+        '<div class="eta-live">Due '+etaTimeStr+' · '+(r.returningToName||'')+'</div>'+
+        '</div></div>';
     }
-    return '<div class="return-card '+(acked?'acknowledged':'')+'" style="animation-delay:'+(i*.05)+'s">'+
-      '<div class="rc-top">'+
-        '<div><div class="rc-driver">'+r.driverName+'</div><div class="rc-fleet">Fleet #'+r.fleet+' · '+r.fromYardName+'</div></div>'+
-        '<div class="rc-time">'+timeStr+'</div>'+
-      '</div>'+
-      '<div class="rc-pills">'+
-        '<div class="rc-pill vol">🪣 '+r.volume+'m³</div>'+
-        '<div class="rc-pill yard">→ '+r.returningToName+'</div>'+
-        (r.docket&&r.docket!=='—'?'<div class="rc-pill" style="color:var(--muted);border-color:var(--border)">Docket '+r.docket+'</div>':'')+
-      '</div>'+
-      etaHtml+
-      '<div class="bowl-timer-card">'+
-        '<div><div class="btc-label">🪣 Concrete in Bowl</div><div class="btc-time">'+bowlStr+'</div><div class="btc-sub">Time from yard departure to pour end</div></div>'+
-      '</div>'+
-      (r.notes?'<div style="font-size:13px;color:var(--muted);font-style:italic;margin-bottom:8px;">"'+r.notes+'"</div>':'')+
-      '<div class="rc-actions">'+
-        (r.lat&&r.lng?'<button class="rc-btn map-btn" onclick="viewReturnOnMap(''+key+'')">📍 View on Map</button>':'')+
-        (!acked?'<button class="rc-btn ack-btn" onclick="acknowledgeReturn(''+key+'')">✓ Acknowledge</button>':
-                '<span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted)">✓ Done</span>')+
-      '</div>'+
-    '</div>';
-  }).join('');
-  // Live ETA countdown - refreshes every 30 seconds
+
+    var bowlHtml='<div class="bowl-timer-card">'+
+      '<div><div class="btc-label">🪣 Concrete in Bowl</div>'+
+      '<div class="btc-time">'+bowlStr+'</div>'+
+      '<div class="btc-sub">Time from yard departure to pour end</div></div></div>';
+
+    var notesHtml=r.notes?'<div style="font-size:13px;color:var(--muted);font-style:italic;margin-bottom:8px;">"'+r.notes+'"</div>':'';
+
+    card.innerHTML=topHtml+pillHtml+etaHtml+bowlHtml+notesHtml+'<div class="rc-actions" id="rca-'+key+'"></div>';
+    container.appendChild(card);
+
+    // Add buttons via DOM to avoid any escaping issues
+    var actions=document.getElementById('rca-'+key);
+    if(r.lat&&r.lng){
+      var mapBtn=document.createElement('button');
+      mapBtn.className='rc-btn map-btn';
+      mapBtn.textContent='📍 View on Map';
+      mapBtn.onclick=function(){viewReturnOnMap(key);};
+      actions.appendChild(mapBtn);
+    }
+    if(!acked){
+      var ackBtn=document.createElement('button');
+      ackBtn.className='rc-btn ack-btn';
+      ackBtn.textContent='✓ Acknowledge';
+      ackBtn.onclick=function(){acknowledgeReturn(key);};
+      actions.appendChild(ackBtn);
+    } else {
+      var doneSpan=document.createElement('span');
+      doneSpan.style.cssText="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)";
+      doneSpan.textContent='✓ Done';
+      actions.appendChild(doneSpan);
+    }
+  });
+
+  // ETA countdown
   clearInterval(window._etaTimer);
   window._etaTimer=setInterval(function(){
     Object.entries(liveReturns).forEach(function(entry){
       var key=entry[0],r=entry[1];
       if(r.status==='acknowledged'||!r.etaTimestamp)return;
-      var el=document.getElementById('eta-cd-'+key);
-      if(!el)return;
+      var el=document.getElementById('eta-cd-'+key);if(!el)return;
       var minsLeft=Math.max(0,Math.ceil((r.etaTimestamp-Date.now())/60000));
       el.textContent=minsLeft<=0?'Arriving now':'~'+minsLeft+' min';
       el.style.color=minsLeft<=5?'var(--yellow)':'var(--on)';
     });
   },30000);
 }
+
 
 function acknowledgeReturn(key){db.ref('returns/'+key+'/status').set('acknowledged');updateBadges();}
 function clearAcknowledged(){
@@ -779,44 +808,75 @@ function renderUsers(){
     var pending=Object.entries(users).filter(function(e){return e[1].role==='collections'&&!e[1].approved;});
     var all=Object.entries(users).sort(function(a,b){return (a[1].name||'').localeCompare(b[1].name||'');});
     var roleColors={driver:'var(--on)',dispatcher:'var(--yellow)',collections:'#a78bfa'};
-    var roleIcons={driver:'🚛',dispatcher:'⚡',collections:'🧪'};
-    // Pending
-    var pb=document.getElementById('pending-users-list');
-    if(pending.length===0){
-      pb.innerHTML='<div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);padding:20px 0;">No pending approvals.</div>';
-    } else {
-      pb.innerHTML=pending.map(function(entry){
-        var uid=entry[0],u=entry[1];
-        return '<div style="background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.3);border-radius:14px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;">'+
-          '<div>'+
-            '<div style="font-size:16px;font-weight:700;color:var(--text);">'+u.name+'</div>'+
-            '<div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);">'+u.email+' · 🧪 Collections</div>'+
-          '</div>'+
-          '<div style="display:flex;gap:8px;">'+
-            '<button onclick="approveUser(''+uid+'')" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--on);border:1px solid rgba(0,229,160,.3);background:var(--on-dim);border-radius:100px;padding:7px 16px;cursor:pointer;">✓ Approve</button>'+
-            '<button onclick="denyUser(''+uid+'')" style="font-family:'DM Mono',monospace;font-size:11px;color:var(--off);border:1px solid rgba(255,77,109,.3);background:var(--off-dim);border-radius:100px;padding:7px 16px;cursor:pointer;">✕ Deny</button>'+
-          '</div>'+
-        '</div>';
-      }).join('');
-    }
-    // Badge
+    var roleIcons={driver:'\u{1F69B}',dispatcher:'\u26A1',collections:'\u{1F9EA}'};
+
+    // Pending badge
     var ub=document.getElementById('users-badge');
-    if(pending.length>0){ub.textContent=pending.length;ub.classList.add('show');}else ub.classList.remove('show');
+    if(pending.length>0){ub.textContent=pending.length;ub.classList.add('show');}else{ub.classList.remove('show');}
+
+    // Pending list - use DOM to avoid string escaping issues
+    var pb=document.getElementById('pending-users-list');
+    pb.innerHTML='';
+    if(pending.length===0){
+      var msg=document.createElement('div');
+      msg.style.cssText='font-size:12px;color:var(--muted);padding:20px 0;';
+      msg.textContent='No pending approvals.';
+      pb.appendChild(msg);
+    } else {
+      pending.forEach(function(entry){
+        var uid=entry[0],u=entry[1];
+        var card=document.createElement('div');
+        card.style.cssText='background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.3);border-radius:14px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:12px;';
+        var info=document.createElement('div');
+        var nameEl=document.createElement('div');
+        nameEl.style.cssText='font-size:16px;font-weight:700;color:var(--text);';
+        nameEl.textContent=u.name;
+        var emailEl=document.createElement('div');
+        emailEl.style.cssText='font-size:11px;color:var(--muted);';
+        emailEl.textContent=u.email+' · Collections';
+        info.appendChild(nameEl); info.appendChild(emailEl);
+        var btns=document.createElement('div');
+        btns.style.cssText='display:flex;gap:8px;';
+        var approveBtn=document.createElement('button');
+        approveBtn.style.cssText='font-size:11px;color:var(--on);border:1px solid rgba(0,229,160,.3);background:var(--on-dim);border-radius:100px;padding:7px 16px;cursor:pointer;';
+        approveBtn.textContent='\u2713 Approve';
+        approveBtn.onclick=(function(id){return function(){approveUser(id);};})(uid);
+        var denyBtn=document.createElement('button');
+        denyBtn.style.cssText='font-size:11px;color:var(--off);border:1px solid rgba(255,77,109,.3);background:var(--off-dim);border-radius:100px;padding:7px 16px;cursor:pointer;';
+        denyBtn.textContent='\u2715 Deny';
+        denyBtn.onclick=(function(id){return function(){denyUser(id);};})(uid);
+        btns.appendChild(approveBtn); btns.appendChild(denyBtn);
+        card.appendChild(info); card.appendChild(btns);
+        pb.appendChild(card);
+      });
+    }
+
     // All users list
-    document.getElementById('all-users-list').innerHTML=all.map(function(entry){
+    var al=document.getElementById('all-users-list');
+    al.innerHTML='';
+    all.forEach(function(entry){
       var uid=entry[0],u=entry[1];
       var col=roleColors[u.role]||'var(--muted)';
-      var ic=roleIcons[u.role]||'👤';
-      return '<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">'+
-        '<div>'+
-          '<div style="font-size:15px;font-weight:600;color:var(--text);">'+u.name+'</div>'+
-          '<div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);">'+u.email+'</div>'+
-        '</div>'+
-        '<div style="font-family:'DM Mono',monospace;font-size:11px;padding:4px 10px;border-radius:100px;border:1px solid '+col+'40;background:'+col+'15;color:'+col+'">'+ic+' '+u.role+(u.role==='collections'?(u.approved?' · ✓':' · ⏳'):'')+'</div>'+
-      '</div>';
-    }).join('');
+      var row=document.createElement('div');
+      row.style.cssText='background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;';
+      var left=document.createElement('div');
+      var nameEl=document.createElement('div');
+      nameEl.style.cssText='font-size:15px;font-weight:600;color:var(--text);';
+      nameEl.textContent=u.name||'—';
+      var emailEl=document.createElement('div');
+      emailEl.style.cssText='font-size:10px;color:var(--muted);';
+      emailEl.textContent=u.email||'';
+      left.appendChild(nameEl); left.appendChild(emailEl);
+      var badge=document.createElement('div');
+      badge.style.cssText='font-size:11px;padding:4px 10px;border-radius:100px;border:1px solid '+col+'40;background:'+col+'15;color:'+col+';';
+      var roleLabel=u.role+(u.role==='collections'?(u.approved?' ✓':' ⏳'):'');
+      badge.textContent=roleLabel;
+      row.appendChild(left); row.appendChild(badge);
+      al.appendChild(row);
+    });
   });
 }
+
 function approveUser(uid){
   db.ref('users/'+uid+'/approved').set(true).then(function(){renderUsers();});
 }
