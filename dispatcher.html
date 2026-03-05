@@ -12,7 +12,7 @@
 html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;}
 
 /* Login */
-#app{display:block;}
+
 
 /* Nav */
 .top-nav{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20;}
@@ -85,10 +85,10 @@ select.field-input option{background:#13161e;}
 </head>
 <body>
 
-<!-- auth handled by login.html -->
+
 
 <!-- App -->
-<div id="app">
+<div id="app" style="display:block;">
   <div class="top-nav">
     <div class="top-nav-title">⚡ Dispatch</div>
     <div class="top-nav-right">
@@ -195,35 +195,17 @@ var liveShifts={},liveJobs={},liveNotifs={};
 var selectedDriverId=null,selectedDriverName='',selectedDriverFleet='',dbStarted=false;
 
 auth.onAuthStateChanged(function(user){
-  if(user){
-    document.getElementById('login-screen').style.display='none';
-    document.getElementById('app').style.display='block';
-    if(user.photoURL){document.getElementById('admin-avatar').src=user.photoURL;document.getElementById('admin-avatar').style.display='block';}
-    if(!dbStarted)startDb();
-  } else {
-    document.getElementById('login-screen').style.display='flex';
-    document.getElementById('app').style.display='none';
-  }
-});
-function signInWithGoogle(){
-  document.getElementById('login-error').style.display='none';
-  var provider=new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(function(err){
-    if(err.code==='auth/popup-blocked'||err.code==='auth/popup-closed-by-user'||err.code==='auth/cancelled-popup-request'){
-      auth.signInWithRedirect(provider);
-    } else {
-      document.getElementById('login-error').style.display='block';
-      document.getElementById('login-error').textContent='Sign in failed: '+err.message;
+  if(!user){window.location.href='login.html';return;}
+  db.ref('users/'+user.uid).once('value').then(function(snap){
+    var u=snap.val();
+    if(!u||!['admin','dispatcher'].includes(u.role)){
+      auth.signOut();window.location.href='login.html';return;
     }
+    document.getElementById('admin-name').textContent=u.name||user.email;
+    if(!dbStarted)startDb();
   });
-}
-auth.getRedirectResult().catch(function(err){
-  if(err&&err.code){
-    document.getElementById('login-error').style.display='block';
-    document.getElementById('login-error').textContent='Sign in failed: '+err.message;
-  }
 });
-function signOut(){auth.signOut();}
+function signOut(){auth.signOut();window.location.href='login.html';}
 
 function startDb(){
   dbStarted=true;
