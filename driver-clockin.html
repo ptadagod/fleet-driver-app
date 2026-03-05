@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Fleet Driver — Clock In</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14; --surface: #13161e; --border: #1e2330;
+    --on: #00e5a0; --off: #ff4d6d;
+    --on-dim: rgba(0,229,160,0.12); --off-dim: rgba(255,77,109,0.12);
+    --text: #e8eaf0; --muted: #5a6080; --yellow: #f5c842;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height:100%; background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; overflow-x:hidden; }
+
+  /* ── SCREEN SYSTEM ── */
+  .screen { display:none; min-height:100vh; flex-direction:column; }
+  .screen.active { display:flex; }
+
+  /* ── SHARED ── */
+  .nav {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 10;
+  }
+  .nav-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .nav-back {
+    color: var(--on); font-family: 'DM Mono', monospace; font-size: 14px;
+    background: none; border: none; cursor: pointer; padding: 4px 0;
+  }
+  .nav-action {
+    color: var(--muted); font-family: 'DM Mono', monospace; font-size: 13px;
+    background: none; border: none; cursor: pointer; padding: 4px 0;
+  }
+  .scroll-body { flex:1; overflow-y:auto; padding: 20px; }
+
+  /* ── SCREEN 1: YARD ── */
+  .hero { padding: 8px 0 28px; }
+  .eyebrow { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.2em; color:var(--yellow); margin-bottom:8px; text-transform:uppercase; }
+  .hero-title { font-family:'Bebas Neue',sans-serif; font-size:52px; line-height:.95; color:var(--text); }
+  .hero-title span { color:var(--on); }
+
+  .section-label { font-family:'DM Mono',monospace; font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
+
+  .yard-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 18px 20px; margin-bottom: 12px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; transition: border-color .15s, transform .1s;
+    -webkit-user-select: none;
+  }
+  .yard-card:active { transform: scale(0.98); border-color: var(--yellow); }
+  .yard-card-name { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+  .yard-card-code { font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); letter-spacing:.1em; }
+  .yard-card-arrow { color: var(--yellow); font-size: 22px; font-weight: 700; }
+
+  /* ── SCREEN 2: DRIVER ── */
+  .search-wrap {
+    position: relative; margin-bottom: 16px;
+  }
+  .search-wrap input {
+    width:100%; background:var(--surface); border:1px solid var(--border);
+    color:var(--text); font-family:'DM Sans',sans-serif; font-size:16px;
+    padding: 14px 16px 14px 44px; border-radius:12px; outline:none;
+    transition:border-color .2s; -webkit-appearance:none;
+  }
+  .search-wrap input:focus { border-color:var(--on); }
+  .search-wrap input::placeholder { color:var(--muted); }
+  .search-icon { position:absolute; left:15px; top:50%; transform:translateY(-50%); font-size:16px; pointer-events:none; }
+
+  .driver-row {
+    background:var(--surface); border:1px solid var(--border); border-radius:12px;
+    padding:16px 18px; margin-bottom:10px;
+    display:flex; align-items:center; justify-content:space-between;
+    cursor:pointer; transition:border-color .15s, transform .1s;
+    -webkit-user-select:none;
+  }
+  .driver-row:active { transform:scale(0.98); border-color:var(--on); }
+  .driver-row-left { display:flex; align-items:center; gap:16px; }
+  .driver-fleet { font-family:'Bebas Neue',sans-serif; font-size:32px; color:var(--on); line-height:1; width:52px; }
+  .driver-name { font-size:17px; font-weight:600; color:var(--text); }
+  .driver-arrow { color:var(--muted); font-size:18px; }
+
+  /* ── SCREEN 3: CLOCK ── */
+  .clock-screen-body {
+    flex:1; display:flex; flex-direction:column; align-items:center;
+    padding: 24px 20px 40px; gap:0;
+  }
+
+  /* Info card */
+  .info-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:20px;
+    padding:24px; width:100%; text-align:center; margin-bottom:20px;
+  }
+  .info-fleet { font-family:'Bebas Neue',sans-serif; font-size:64px; line-height:1; color:var(--on); }
+  .info-fleet-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:2px; margin-bottom:10px; }
+  .info-name { font-size:26px; font-weight:700; color:var(--text); margin-bottom:12px; }
+  .info-yard-badge {
+    display:inline-flex; align-items:center;
+    background:rgba(245,200,66,0.1); border:1px solid rgba(245,200,66,0.3);
+    border-radius:100px; padding:6px 16px;
+    font-family:'DM Mono',monospace; font-size:12px; color:var(--yellow); letter-spacing:1px;
+  }
+
+  /* Status badge */
+  .status-row {
+    display:flex; align-items:center; gap:10px; margin-bottom:16px;
+    border:1px solid; border-radius:100px; padding:10px 20px;
+    transition: all .3s;
+  }
+  .status-row.on  { border-color:rgba(0,229,160,.3);  background:var(--on-dim);  }
+  .status-row.off { border-color:rgba(255,77,109,.3); background:var(--off-dim); }
+  .status-dot {
+    width:10px; height:10px; border-radius:50%; flex-shrink:0;
+    transition: background .3s;
+  }
+  .status-row.on  .status-dot { background:var(--on);  box-shadow:0 0 8px var(--on); animation:pulse 1.8s infinite; }
+  .status-row.off .status-dot { background:var(--off); }
+  .status-text { font-family:'DM Mono',monospace; font-size:13px; font-weight:500; letter-spacing:2px; }
+  .status-row.on  .status-text { color:var(--on); }
+  .status-row.off .status-text { color:var(--off); }
+
+  /* Elapsed */
+  .elapsed-block { text-align:center; margin-bottom:20px; min-height:64px; }
+  .elapsed-label { font-family:'DM Mono',monospace; font-size:10px; color:var(--muted); letter-spacing:2px; text-transform:uppercase; }
+  .elapsed-time  { font-family:'DM Mono',monospace; font-size:40px; font-weight:500; color:var(--text); margin:4px 0; }
+  .elapsed-since { font-family:'DM Mono',monospace; font-size:12px; color:var(--muted); }
+
+  /* Big clock button */
+  .clock-btn {
+    width:100%; border:2px solid; border-radius:20px; padding:32px 20px;
+    display:flex; flex-direction:column; align-items:center; gap:8px;
+    cursor:pointer; transition:all .2s; background:transparent;
+    -webkit-user-select:none;
+  }
+  .clock-btn:active { transform:scale(0.97); }
+  .clock-btn.clock-in  { border-color:var(--on);  background:var(--on-dim);  }
+  .clock-btn.clock-out { border-color:var(--off); background:var(--off-dim); }
+  .clock-btn-icon { font-size:44px; line-height:1; }
+  .clock-btn-text { font-family:'DM Mono',monospace; font-size:28px; font-weight:700; letter-spacing:3px; }
+  .clock-btn.clock-in  .clock-btn-text { color:var(--on); }
+  .clock-btn.clock-out .clock-btn-text { color:var(--off); }
+  .clock-btn-sub { font-family:'DM Mono',monospace; font-size:12px; opacity:.6; }
+  .clock-btn.clock-in  .clock-btn-sub { color:var(--on); }
+  .clock-btn.clock-out .clock-btn-sub { color:var(--off); }
+
+  /* Loading */
+  .loading-wrap { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
+  .spinner { width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--on); border-radius:50%; animation:spin .8s linear infinite; }
+
+  /* Toast */
+  .toast {
+    position:fixed; bottom:32px; left:50%; transform:translateX(-50%) translateY(80px);
+    background:var(--surface); border:1px solid var(--border); border-radius:100px;
+    padding:12px 24px; font-family:'DM Mono',monospace; font-size:13px; color:var(--text);
+    transition:transform .3s; z-index:100; white-space:nowrap;
+    box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  @keyframes spin   { to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+
+<!-- ── SCREEN 1: SELECT YARD ── -->
+<div class="screen active" id="screen-yard">
+  <div class="scroll-body">
+    <div class="hero">
+      <div class="eyebrow">Fleet Driver App</div>
+      <div class="hero-title">Select<br>Your<br><span>Yard</span></div>
+    </div>
+    <div class="section-label">Which yard are you at?</div>
+    <div id="yard-list"></div>
+  </div>
+</div>
+
+<!-- ── SCREEN 2: SELECT DRIVER ── -->
+<div class="screen" id="screen-driver">
+  <div class="nav">
+    <button class="nav-back" onclick="goTo('yard')">← Back</button>
+    <span class="nav-title" id="driver-screen-title">Select Driver</span>
+    <div style="width:60px"></div>
+  </div>
+  <div class="scroll-body">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="driver-search" placeholder="Search name or fleet #…" oninput="filterDrivers()" autocomplete="off">
+    </div>
+    <div class="section-label">Who are you?</div>
+    <div id="driver-list"></div>
+  </div>
+</div>
+
+<!-- ── SCREEN 3: CLOCK IN/OUT ── -->
+<div class="screen" id="screen-clock">
+  <div class="nav">
+    <button class="nav-back" onclick="goTo('driver')">← Back</button>
+    <span class="nav-title" id="clock-screen-title"></span>
+    <button class="nav-action" onclick="logout()">Logout</button>
+  </div>
+  <div class="clock-screen-body" id="clock-body">
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <span style="font-family:monospace;font-size:13px;color:var(--muted)">Connecting…</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, set, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+// ── Firebase ──────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyCzvWNFjDlt-tjaAigMVZ9BicWCUa0guG0",
+  authDomain:        "fleetshifttracker.firebaseapp.com",
+  databaseURL:       "https://fleetshifttracker-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "fleetshifttracker",
+  storageBucket:     "fleetshifttracker.firebasestorage.app",
+  messagingSenderId: "276983000908",
+  appId:             "1:276983000908:web:7948d3ccab92359795e9e9"
+};
+const app = initializeApp(firebaseConfig);
+const db  = getDatabase(app);
+
+// ── Data ──────────────────────────────────────────────────
+const yards = [
+  { id:'east-tamaki', name:'East Tamaki', code:'CE', drivers:[
+    {id:'ce1',name:'Joel',fleet:'269'},{id:'ce2',name:'Wallace',fleet:'683'},
+    {id:'ce3',name:'Jameem',fleet:'280'},{id:'ce4',name:'Parnil',fleet:'394'},
+    {id:'ce5',name:'Peter',fleet:'304'},{id:'ce6',name:'Zainal',fleet:'388'},
+    {id:'ce7',name:'Parmdeep',fleet:'484'},{id:'ce8',name:'Nikhil',fleet:'356'},
+    {id:'ce9',name:'Mohammed',fleet:'351'},{id:'ce10',name:'Sumit R',fleet:'435'},
+    {id:'ce11',name:'TK',fleet:'416'},
+  ]},
+  { id:'drury', name:'Drury', code:'CD', drivers:[
+    {id:'cd1',name:'Karamjit',fleet:'281'},{id:'cd2',name:'Sachpreet',fleet:'467'},
+    {id:'cd3',name:'Priyantha',fleet:'446'},{id:'cd4',name:'Mandeep',fleet:'306'},
+    {id:'cd5',name:'Bhupinder',fleet:'298'},{id:'cd6',name:'Rupinder',fleet:'469'},
+    {id:'cd7',name:'Aman',fleet:'301'},{id:'cd8',name:'Harpreet',fleet:'391'},
+  ]},
+  { id:'ranui', name:'Ranui', code:'CR', drivers:[
+    {id:'cr1',name:'Richard',fleet:'282'},{id:'cr2',name:'Grupreet',fleet:'468'},
+    {id:'cr3',name:'Tharindu',fleet:'441'},{id:'cr4',name:'Gayan',fleet:'442'},
+    {id:'cr5',name:'Wajara',fleet:'462'},
+  ]},
+  { id:'penrose', name:'Penrose', code:'CP', drivers:[
+    {id:'cp1',name:'Akhilesh',fleet:'272'},{id:'cp2',name:'Shiv',fleet:'433'},
+    {id:'cp3',name:'Adil',fleet:'418'},{id:'cp4',name:'Baljit',fleet:'422'},
+    {id:'cp5',name:'Taranpreet',fleet:'421'},{id:'cp6',name:'Manish',fleet:'352'},
+    {id:'cp7',name:'Jalal',fleet:'299'},{id:'cp8',name:'Gagandeep',fleet:'470'},
+    {id:'cp9',name:'Sukhbir',fleet:'395'},{id:'cp10',name:'Davinder',fleet:'466'},
+    {id:'cp11',name:'Jaspreet',fleet:'354'},{id:'cp12',name:'Airun',fleet:'427'},
+    {id:'cp13',name:'Rem',fleet:'419'},{id:'cp14',name:'Ravneet',fleet:'465'},
+    {id:'cp15',name:'Daba',fleet:'445'},
+  ]},
+];
+
+// ── State ─────────────────────────────────────────────────
+let activeYard   = null;
+let activeDriver = null;
+let liveUnsub    = null;
+let elapsedTimer = null;
+
+// ── Session restore ───────────────────────────────────────
+const saved = JSON.parse(localStorage.getItem('fst_session') || 'null');
+if (saved) {
+  const yard   = yards.find(y => y.id === saved.yardId);
+  const driver = yard?.drivers.find(d => d.id === saved.driverId);
+  if (yard && driver) {
+    activeYard = yard; activeDriver = driver;
+    goTo('clock');
+  }
+}
+
+// ── Screens ───────────────────────────────────────────────
+window.goTo = (screen) => {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + screen).classList.add('active');
+  if (screen === 'yard')   renderYards();
+  if (screen === 'driver') renderDrivers();
+  if (screen === 'clock')  renderClock();
+  if (screen !== 'clock' && liveUnsub) { liveUnsub(); liveUnsub = null; }
+  if (screen !== 'clock') { clearInterval(elapsedTimer); elapsedTimer = null; }
+};
+
+window.logout = () => {
+  localStorage.removeItem('fst_session');
+  activeYard = null; activeDriver = null;
+  goTo('yard');
+};
+
+// ── Screen 1: Yards ───────────────────────────────────────
+function renderYards() {
+  document.getElementById('yard-list').innerHTML = yards.map(y => `
+    <div class="yard-card" onclick="selectYard('${y.id}')">
+      <div>
+        <div class="yard-card-name">${y.name}</div>
+        <div class="yard-card-code">${y.code} · ${y.drivers.length} drivers</div>
+      </div>
+      <div class="yard-card-arrow">→</div>
+    </div>
+  `).join('');
+}
+
+window.selectYard = (yardId) => {
+  activeYard = yards.find(y => y.id === yardId);
+  document.getElementById('driver-screen-title').textContent = activeYard.name;
+  document.getElementById('driver-search').value = '';
+  goTo('driver');
+};
+
+// ── Screen 2: Drivers ─────────────────────────────────────
+function renderDrivers(filter = '') {
+  const q = filter.toLowerCase();
+  const list = activeYard.drivers.filter(d =>
+    d.name.toLowerCase().includes(q) || d.fleet.includes(q)
+  );
+  document.getElementById('driver-list').innerHTML = list.map(d => `
+    <div class="driver-row" onclick="selectDriver('${d.id}')">
+      <div class="driver-row-left">
+        <div class="driver-fleet">${d.fleet}</div>
+        <div class="driver-name">${d.name}</div>
+      </div>
+      <div class="driver-arrow">→</div>
+    </div>
+  `).join('');
+}
+
+window.filterDrivers = () => {
+  renderDrivers(document.getElementById('driver-search').value);
+};
+
+window.selectDriver = (driverId) => {
+  activeDriver = activeYard.drivers.find(d => d.id === driverId);
+  localStorage.setItem('fst_session', JSON.stringify({ yardId: activeYard.id, driverId: activeDriver.id }));
+  goTo('clock');
+};
+
+// ── Screen 3: Clock ───────────────────────────────────────
+function renderClock() {
+  document.getElementById('clock-screen-title').textContent = activeYard.name;
+  document.getElementById('clock-body').innerHTML = `
+    <div class="loading-wrap"><div class="spinner"></div></div>
+  `;
+
+  if (liveUnsub) liveUnsub();
+  liveUnsub = onValue(ref(db, 'shifts/' + activeDriver.id), snap => {
+    const data = snap.val() || {};
+    const isOn = data.onShift === true;
+    const clockInTime = data.clockInTime || null;
+    buildClockUI(isOn, clockInTime);
+  });
+}
+
+function buildClockUI(isOn, clockInTime) {
+  clearInterval(elapsedTimer);
+
+  document.getElementById('clock-body').innerHTML = `
+    <div class="info-card">
+      <div class="info-fleet">${activeDriver.fleet}</div>
+      <div class="info-fleet-label">FLEET #</div>
+      <div class="info-name">${activeDriver.name}</div>
+      <div class="info-yard-badge">${activeYard.code} · ${activeYard.name}</div>
+    </div>
+
+    <div class="status-row ${isOn ? 'on' : 'off'}" id="status-row">
+      <div class="status-dot"></div>
+      <div class="status-text">${isOn ? 'ON SHIFT' : 'OFF SHIFT'}</div>
+    </div>
+
+    <div class="elapsed-block" id="elapsed-block">
+      ${isOn && clockInTime ? `
+        <div class="elapsed-label">TIME ON SHIFT</div>
+        <div class="elapsed-time" id="elapsed-time">00:00:00</div>
+        <div class="elapsed-since">Clocked in at ${formatTime(clockInTime)}</div>
+      ` : ''}
+    </div>
+
+    <button class="clock-btn ${isOn ? 'clock-out' : 'clock-in'}" onclick="handleToggle(${isOn}, ${clockInTime})">
+      <div class="clock-btn-icon">${isOn ? '⏹' : '▶'}</div>
+      <div class="clock-btn-text">${isOn ? 'CLOCK OUT' : 'CLOCK IN'}</div>
+      <div class="clock-btn-sub">${isOn ? 'Tap to end your shift' : 'Tap to start your shift'}</div>
+    </button>
+  `;
+
+  if (isOn && clockInTime) {
+    updateElapsed(clockInTime);
+    elapsedTimer = setInterval(() => updateElapsed(clockInTime), 1000);
+  }
+}
+
+function updateElapsed(clockInTime) {
+  const el = document.getElementById('elapsed-time');
+  if (!el) return;
+  const diff = Date.now() - clockInTime;
+  const h   = Math.floor(diff / 3600000);
+  const m   = Math.floor((diff % 3600000) / 60000);
+  const sec = Math.floor((diff % 60000) / 1000);
+  el.textContent = `${pad(h)}:${pad(m)}:${pad(sec)}`;
+}
+
+window.handleToggle = async (currentlyOn, clockInTime) => {
+  const newStatus = !currentlyOn;
+  const msg = newStatus
+    ? `Clock in as ${activeDriver.name}?`
+    : `Clock out and end your shift?`;
+
+  if (!confirm(msg)) return;
+
+  try {
+    await set(ref(db, 'shifts/' + activeDriver.id), {
+      onShift:     newStatus,
+      driverName:  activeDriver.name,
+      fleet:       activeDriver.fleet,
+      yardId:      activeYard.id,
+      yardName:    activeYard.name,
+      yardCode:    activeYard.code,
+      clockInTime: newStatus ? Date.now() : null,
+      lastUpdated: Date.now(),
+    });
+    showToast(newStatus ? '✓ Clocked in!' : '✓ Clocked out!');
+  } catch(e) {
+    showToast('⚠ Connection error. Try again.');
+  }
+};
+
+// ── Helpers ───────────────────────────────────────────────
+function formatTime(ts) {
+  return new Date(ts).toLocaleTimeString('en-NZ', { hour:'2-digit', minute:'2-digit' });
+}
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ── Init ──────────────────────────────────────────────────
+renderYards();
+</script>
+</body>
+</html>
