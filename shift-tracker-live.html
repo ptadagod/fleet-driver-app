@@ -11,7 +11,6 @@
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
 
 /* Login */
-#login-screen{display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px;}
 .login-box{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:48px 40px;max-width:400px;width:100%;text-align:center;}
 .login-logo{font-family:'Bebas Neue',sans-serif;font-size:48px;line-height:.9;margin-bottom:6px;}
 .login-logo span{color:var(--on);}
@@ -190,21 +189,8 @@ footer{margin-top:40px;text-align:center;font-family:'DM Mono',monospace;font-si
 <body>
 
 <!-- Login -->
-<div id="login-screen" style="display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px;">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:40px 36px;max-width:400px;width:100%;text-align:center;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:40px;line-height:.9;margin-bottom:4px;">Fleet<br><span style="color:var(--on)">Shift</span><br>Tracker</div>
-    <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-bottom:28px;">Admin Portal</div>
-    <div style="height:1px;background:var(--border);margin-bottom:24px;"></div>
-    <div id="login-msg" style="font-family:'DM Mono',monospace;font-size:12px;color:var(--off);background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.2);border-radius:8px;padding:10px;margin-bottom:14px;display:none;"></div>
-    <div style="margin-bottom:12px;"><input type="email" id="login-email" placeholder="Email address" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;padding:13px 14px;border-radius:12px;outline:none;" onfocus="this.style.borderColor='var(--on)'" onblur="this.style.borderColor='var(--border)'"></div>
-    <div style="margin-bottom:20px;"><input type="password" id="login-password" placeholder="Password" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;padding:13px 14px;border-radius:12px;outline:none;" onfocus="this.style.borderColor='var(--on)'" onblur="this.style.borderColor='var(--border)'"></div>
-    <button id="login-btn" onclick="doLogin()" style="width:100%;background:var(--on);color:#0d0f14;border:none;border-radius:12px;padding:15px;font-family:'DM Mono',monospace;font-size:14px;font-weight:700;letter-spacing:2px;cursor:pointer;margin-bottom:14px;">SIGN IN</button>
-    <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);">No account? <a href="signup.html" style="color:var(--on);text-decoration:none;">Sign up</a></div>
-  </div>
-</div>
-
 <!-- App -->
-<div id="app">
+<div id="app" style="display:block;">
   <div class="top-bar">
     <div class="tab-bar-inner">
       <button class="tab-btn active" onclick="switchTab('list')" id="tab-list">📋 Shifts</button>
@@ -366,40 +352,17 @@ var bowlTimers={};
 
 // Auth
 auth.onAuthStateChanged(function(user){
-  if(user){
-    db.ref('users/'+user.uid).once('value').then(function(snap){
-      var u=snap.val();
-      // Allow dispatcher and collections (acting as admin/supervisor)
-      if(!u||!(u.role==='dispatcher'||u.role==='collections')){
-        auth.signOut();
-        document.getElementById('login-screen').style.display='flex';
-        document.getElementById('app').style.display='none';
-        return;
-      }
-      document.getElementById('login-screen').style.display='none';
-      document.getElementById('app').style.display='block';
-      document.getElementById('admin-name').textContent=u.name||user.email;
-      if(!dbStarted)startDb();
-    });
-  } else {
-    document.getElementById('login-screen').style.display='flex';
-    document.getElementById('app').style.display='none';
-  }
-});
-function doLogin(){
-  var email=document.getElementById('login-email').value.trim();
-  var pass=document.getElementById('login-password').value;
-  var btn=document.getElementById('login-btn');
-  var msg=document.getElementById('login-msg');
-  if(!email||!pass){msg.textContent='Enter email and password.';msg.style.display='block';return;}
-  btn.disabled=true;btn.textContent='Signing in…';
-  auth.signInWithEmailAndPassword(email,pass).catch(function(err){
-    btn.disabled=false;btn.textContent='SIGN IN';
-    var msgs={'auth/wrong-password':'Incorrect password.','auth/user-not-found':'No account found.','auth/invalid-credential':'Email or password is incorrect.'};
-    msg.textContent=msgs[err.code]||err.message;msg.style.display='block';
+  if(!user){window.location.href='login.html';return;}
+  db.ref('users/'+user.uid).once('value').then(function(snap){
+    var u=snap.val();
+    if(!u||!['admin','dispatcher'].includes(u.role)){
+      auth.signOut();window.location.href='login.html';return;
+    }
+    document.getElementById('admin-name').textContent=u.name||user.email;
+    if(!dbStarted)startDb();
   });
-}
-function signOut(){auth.signOut();}
+});
+function signOut(){auth.signOut();window.location.href='login.html';}
 
 // DB
 function startDb(){
