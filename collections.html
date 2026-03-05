@@ -219,7 +219,7 @@ auth.onAuthStateChanged(function(user){
   if(!user){window.location.href='login.html';return;}
   db.ref('users/'+user.uid).once('value').then(function(snap){
     var u=snap.val();
-    if(!u||u.role!=='collections'||!u.approved){
+    if(!u||(u.role!=='collections'&&u.role!=='admin')||(!u.approved&&u.role!=='admin')){
       auth.signOut();window.location.href='login.html';return;
     }
     currentUser=u;currentUser.uid=user.uid;
