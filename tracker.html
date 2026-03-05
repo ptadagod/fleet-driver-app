@@ -6,11 +6,11 @@
 <title>Fleet Shift Tracker — Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#0d0f14;--surface:#13161e;--border:#1e2330;--on:#00e5a0;--off:#ff4d6d;--on-dim:rgba(0,229,160,0.12);--off-dim:rgba(255,77,109,0.12);--text:#e8eaf0;--muted:#5a6080;--yellow:#f5c842;}
+  :root{--bg:#0d0f14;--surface:#13161e;--border:#1e2330;--on:#00e5a0;--off:#ff4d6d;--on-dim:rgba(0,229,160,0.12);--off-dim:rgba(255,77,109,0.12);--text:#e8eaf0;--muted:#5a6080;--yellow:#f5c842;--yellow-dim:rgba(245,200,66,0.12);}
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
 
-  /* ── LOGIN SCREEN ── */
+  /* Login */
   #login-screen{display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px;}
   .login-box{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:48px 40px;max-width:400px;width:100%;text-align:center;}
   .login-logo{font-family:'Bebas Neue',sans-serif;font-size:48px;line-height:.9;margin-bottom:6px;}
@@ -19,30 +19,39 @@
   .login-divider{height:1px;background:var(--border);margin-bottom:32px;}
   .login-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:16px;}
   .google-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:14px 20px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;box-shadow:0 2px 8px rgba(0,0,0,0.3);}
-  .google-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,0.4);}
-  .google-btn:active{transform:scale(0.98);}
+  .google-btn:hover{transform:translateY(-1px);}
   .google-icon{width:20px;height:20px;flex-shrink:0;}
   .login-error{margin-top:16px;font-family:'DM Mono',monospace;font-size:12px;color:var(--off);display:none;}
-  .login-loading{margin-top:16px;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);display:none;}
 
-  /* ── APP (hidden until logged in) ── */
   #app{display:none;}
 
-  /* ── TOP BAR ── */
+  /* Top bar */
   .top-bar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:20;}
   .tab-bar-inner{display:flex;flex:1;}
-  .tab-btn{padding:16px 20px;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;}
+  .tab-btn{position:relative;padding:16px 18px;font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
   .tab-btn.active{color:var(--on);border-bottom-color:var(--on);}
-  .admin-bar{display:flex;align-items:center;gap:12px;padding:8px 0;}
-  .admin-avatar{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);}
-  .admin-name{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .signout-btn{font-family:'DM Mono',monospace;font-size:11px;color:var(--off);background:none;border:1px solid rgba(255,77,109,.3);border-radius:100px;padding:5px 12px;cursor:pointer;transition:all .15s;}
+  .tab-badge{position:absolute;top:8px;right:6px;background:var(--yellow);color:#0d0f14;font-size:9px;font-weight:700;border-radius:100px;padding:2px 6px;min-width:16px;text-align:center;display:none;}
+  .tab-badge.show{display:block;}
+  .admin-bar{display:flex;align-items:center;gap:10px;padding:8px 0;flex-shrink:0;}
+  .admin-avatar{width:30px;height:30px;border-radius:50%;border:2px solid var(--border);}
+  .admin-name{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .signout-btn{font-family:'DM Mono',monospace;font-size:11px;color:var(--off);background:none;border:1px solid rgba(255,77,109,.3);border-radius:100px;padding:5px 12px;cursor:pointer;}
   .signout-btn:hover{background:var(--off-dim);}
+  .tab-content{display:none;} .tab-content.active{display:block;}
 
-  .tab-content{display:none;}
-  .tab-content.active{display:block;}
+  /* Pop-up notification */
+  .notif-popup{position:fixed;top:70px;right:20px;background:var(--surface);border:1px solid var(--yellow);border-radius:16px;padding:16px 20px;max-width:320px;z-index:100;box-shadow:0 8px 40px rgba(0,0,0,0.5);transform:translateX(120%);transition:transform .35s cubic-bezier(.34,1.56,.64,1);cursor:pointer;}
+  .notif-popup.show{transform:translateX(0);}
+  .notif-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .notif-icon{font-size:20px;}
+  .notif-title{font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:var(--yellow);letter-spacing:.1em;text-transform:uppercase;flex:1;}
+  .notif-close{color:var(--muted);font-size:16px;background:none;border:none;cursor:pointer;padding:0 4px;}
+  .notif-driver{font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px;}
+  .notif-detail{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);line-height:1.7;}
+  .notif-detail span{color:var(--yellow);}
+  .notif-cta{font-family:'DM Mono',monospace;font-size:10px;color:var(--on);margin-top:8px;letter-spacing:.1em;}
 
-  /* ── MAP TAB ── */
+  /* Map */
   #map-container{position:relative;}
   #map{width:100%;height:calc(100vh - 53px);}
   .map-legend{position:absolute;bottom:20px;left:20px;background:rgba(13,15,20,0.92);border:1px solid var(--border);border-radius:12px;padding:14px 18px;font-family:'DM Mono',monospace;font-size:11px;z-index:5;backdrop-filter:blur(8px);}
@@ -55,7 +64,7 @@
   .map-stat.on-s .dot{background:var(--on);box-shadow:0 0 5px var(--on);}
   .map-stat .n{color:var(--text);font-weight:600;margin-right:2px;}
 
-  /* ── LIST TAB ── */
+  /* List */
   .container{max-width:960px;margin:0 auto;padding:28px 24px;}
   .header-top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:24px;}
   .eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--yellow);margin-bottom:6px;}
@@ -71,7 +80,6 @@
   .conn-dot{width:7px;height:7px;border-radius:50%;}
   .conn-dot.on{background:var(--on);box-shadow:0 0 6px var(--on);}
   .conn-dot.off{background:var(--off);}
-
   .yard-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
   .yard-selector{display:grid;grid-template-columns:repeat(auto-fill,minmax(185px,1fr));gap:10px;margin-bottom:20px;}
   .yard-btn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 16px;cursor:pointer;transition:all .18s;text-align:left;}
@@ -79,10 +87,9 @@
   .yard-btn.active{border-color:var(--yellow);background:rgba(245,200,66,.07);}
   .yard-btn .yn{font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--text);line-height:1;}
   .yard-btn.active .yn{color:var(--yellow);}
-  .yard-btn .yc{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.1em;margin-bottom:5px;}
+  .yard-btn .yc{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:5px;}
   .yard-btn .ym{font-family:'DM Mono',monospace;font-size:11px;display:flex;gap:8px;}
   .on-n{color:var(--on);font-weight:500;}.off-n{color:var(--off);font-weight:500;}
-
   .stats-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;}
   .stat-pill{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:100px;padding:7px 14px;font-family:'DM Mono',monospace;font-size:12px;}
   .stat-pill .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
@@ -90,13 +97,11 @@
   .stat-pill.off-c .dot{background:var(--off);}
   .stat-pill.tot-c .dot{background:var(--yellow);}
   .stat-pill .num{font-size:15px;font-weight:500;color:var(--text);margin-right:2px;}
-
   .search-wrap{position:relative;margin-bottom:20px;}
   .search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--muted);}
   input[type=text]{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:13px 16px 13px 44px;border-radius:12px;outline:none;transition:border-color .2s;}
   input[type=text]:focus{border-color:var(--on);}
   input[type=text]::placeholder{color:var(--muted);}
-
   .drivers-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
   .driver-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;position:relative;overflow:hidden;animation:fadeUp .3s ease both;transition:border-color .2s,box-shadow .2s;cursor:pointer;}
   .driver-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0;}
@@ -118,11 +123,41 @@
   .clock-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
   .clock-time span{color:var(--on);}
   .has-location{font-family:'DM Mono',monospace;font-size:10px;color:var(--on);margin-top:4px;}
-
   .section-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;margin-top:8px;display:flex;align-items:center;gap:12px;}
   .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+  footer{margin-top:50px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
 
-  footer{margin-top:50px;text-align:center;font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.1em;}
+  /* Returns tab */
+  .returns-container{max-width:960px;margin:0 auto;padding:28px 24px;}
+  .returns-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;}
+  .returns-title{font-family:'Bebas Neue',sans-serif;font-size:40px;line-height:.9;}
+  .returns-title span{color:var(--yellow);}
+  .clear-btn{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:100px;padding:6px 14px;cursor:pointer;}
+  .clear-btn:hover{border-color:var(--off);color:var(--off);}
+  .return-card{background:var(--surface);border:1px solid rgba(245,200,66,.25);border-radius:16px;padding:20px;margin-bottom:14px;position:relative;overflow:hidden;animation:fadeUp .3s ease both;}
+  .return-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--yellow);border-radius:16px 16px 0 0;}
+  .return-card.acknowledged{border-color:var(--border);opacity:.6;}
+  .return-card.acknowledged::before{background:var(--muted);}
+  .rc-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;gap:12px;}
+  .rc-driver{font-size:18px;font-weight:700;color:var(--text);}
+  .rc-fleet{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);margin-top:2px;}
+  .rc-time{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);text-align:right;white-space:nowrap;}
+  .rc-pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .rc-pill{font-family:'DM Mono',monospace;font-size:11px;padding:5px 12px;border-radius:100px;border:1px solid;}
+  .rc-pill.volume{color:var(--yellow);border-color:rgba(245,200,66,.3);background:var(--yellow-dim);}
+  .rc-pill.mpa{color:var(--on);border-color:rgba(0,229,160,.3);background:var(--on-dim);}
+  .rc-pill.yard{color:var(--text);border-color:var(--border);background:rgba(255,255,255,.04);}
+  .rc-docket{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:8px;}
+  .rc-docket span{color:var(--text);}
+  .rc-notes{font-size:13px;color:var(--muted);font-style:italic;margin-bottom:12px;}
+  .rc-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .rc-btn{font-family:'DM Mono',monospace;font-size:11px;border-radius:100px;padding:7px 16px;cursor:pointer;border:1px solid;transition:all .15s;}
+  .rc-btn.map-btn{color:var(--on);border-color:rgba(0,229,160,.3);background:var(--on-dim);}
+  .rc-btn.map-btn:hover{background:rgba(0,229,160,.2);}
+  .rc-btn.ack-btn{color:var(--muted);border-color:var(--border);background:none;}
+  .rc-btn.ack-btn:hover{color:var(--text);}
+  .empty-returns{text-align:center;padding:60px 20px;font-family:'DM Mono',monospace;font-size:13px;color:var(--muted);}
+  .empty-returns .emoji{font-size:40px;margin-bottom:12px;}
 
   @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
@@ -130,12 +165,12 @@
 </head>
 <body>
 
-<!-- ── LOGIN SCREEN ── -->
+<!-- Login -->
 <div id="login-screen">
   <div class="login-box">
     <div class="login-logo">Fleet<br><span>Shift</span><br>Tracker</div>
     <div class="login-sub">Admin Portal</div>
-    <div class="login-divider"></div>
+    <div class="login-divider" style="height:1px;background:var(--border);margin-bottom:32px;"></div>
     <div class="login-label">Sign in to continue</div>
     <button class="google-btn" onclick="signInWithGoogle()">
       <svg class="google-icon" viewBox="0 0 24 24">
@@ -147,26 +182,28 @@
       Sign in with Google
     </button>
     <div class="login-error" id="login-error">Sign in failed. Please try again.</div>
-    <div class="login-loading" id="login-loading">Signing in…</div>
   </div>
 </div>
 
-<!-- ── APP ── -->
+<!-- App -->
 <div id="app">
-  <!-- Top bar with tabs + admin info -->
   <div class="top-bar">
     <div class="tab-bar-inner">
-      <button class="tab-btn active" onclick="switchTab('list')" id="tab-list">📋 Shift List</button>
-      <button class="tab-btn" onclick="switchTab('map')" id="tab-map">🗺️ Live Map</button>
+      <button class="tab-btn active" onclick="switchTab('list')" id="tab-list">📋 Shifts</button>
+      <button class="tab-btn" onclick="switchTab('map')"  id="tab-map">🗺️ Map</button>
+      <button class="tab-btn" onclick="switchTab('returns')" id="tab-returns">
+        🪣 Returns
+        <span class="tab-badge" id="returns-badge">0</span>
+      </button>
     </div>
     <div class="admin-bar">
-      <img class="admin-avatar" id="admin-avatar" src="" alt="">
+      <img class="admin-avatar" id="admin-avatar" src="" alt="" style="display:none">
       <span class="admin-name" id="admin-name"></span>
       <button class="signout-btn" onclick="signOut()">Sign out</button>
     </div>
   </div>
 
-  <!-- MAP TAB -->
+  <!-- MAP -->
   <div class="tab-content" id="content-map">
     <div id="map-container">
       <div class="map-stats" id="map-stats"></div>
@@ -174,13 +211,13 @@
       <div class="map-legend">
         <div class="map-legend-title">Legend</div>
         <div class="legend-row"><div class="legend-dot" style="background:#00e5a0"></div>On Shift · Live GPS</div>
-        <div class="legend-row"><div class="legend-dot" style="background:#ff4d6d"></div>On Shift · No GPS</div>
+        <div class="legend-row"><div class="legend-dot" style="background:#f5c842"></div>Has Return Concrete</div>
         <div class="legend-row"><div class="legend-dot" style="background:#5a6080"></div>Off Shift</div>
       </div>
     </div>
   </div>
 
-  <!-- LIST TAB -->
+  <!-- LIST -->
   <div class="tab-content active" id="content-list">
     <div class="container">
       <div class="header-top">
@@ -195,10 +232,7 @@
             <strong id="clockTime">--:--:--</strong>
             Live Clock
           </div>
-          <div class="conn-status">
-            <div class="conn-dot off" id="connDot"></div>
-            <span id="connText">Connecting…</span>
-          </div>
+          <div class="conn-status"><div class="conn-dot off" id="connDot"></div><span id="connText">Connecting…</span></div>
         </div>
       </div>
       <div class="yard-label">Select Yard</div>
@@ -208,10 +242,7 @@
         <div class="stat-pill off-c"><div class="dot"></div><span><span class="num" id="offCount">0</span> Off Shift</span></div>
         <div class="stat-pill tot-c"><div class="dot"></div><span><span class="num" id="totalCount">0</span> Total</span></div>
       </div>
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" placeholder="Search driver name or fleet #…">
-      </div>
+      <div class="search-wrap"><span class="search-icon">🔍</span><input type="text" id="searchInput" placeholder="Search driver name or fleet #…"></div>
       <div class="section-label" id="onLabel">On Shift</div>
       <div class="drivers-grid" id="onGrid"></div>
       <div class="section-label" id="offLabel" style="margin-top:24px">Off Shift</div>
@@ -219,19 +250,43 @@
       <footer>Fleet Operations · Admin Portal · 2026</footer>
     </div>
   </div>
+
+  <!-- RETURNS -->
+  <div class="tab-content" id="content-returns">
+    <div class="returns-container">
+      <div class="returns-header">
+        <div>
+          <div class="eyebrow">Incoming</div>
+          <div class="returns-title">Return<br><span>Concrete</span></div>
+        </div>
+        <button class="clear-btn" onclick="clearAcknowledged()">Clear acknowledged</button>
+      </div>
+      <div id="returns-list"></div>
+    </div>
+  </div>
 </div>
 
-<!-- Firebase compat -->
+<!-- Notification popup -->
+<div class="notif-popup" id="notif-popup" onclick="notifClick()">
+  <div class="notif-header">
+    <div class="notif-icon">🪣</div>
+    <div class="notif-title">Return Concrete</div>
+    <button class="notif-close" onclick="event.stopPropagation();closeNotif()">✕</button>
+  </div>
+  <div class="notif-driver" id="notif-driver">—</div>
+  <div class="notif-detail" id="notif-detail">—</div>
+  <div class="notif-cta">Tap to view → Returns tab</div>
+</div>
+
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
 <!-- Google Maps -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBt_8TZ4cBONkK_OSJurYnBCJSm2Zpi8uc&callback=initMap" async defer></script>
 
 <script>
-// ── Firebase init ─────────────────────────────────────────
-const firebaseConfig = {
+firebase.initializeApp({
   apiKey:            "AIzaSyCzvWNFjDlt-tjaAigMVZ9BicWCUa0guG0",
   authDomain:        "fleetshifttracker.firebaseapp.com",
   databaseURL:       "https://fleetshifttracker-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -239,13 +294,11 @@ const firebaseConfig = {
   storageBucket:     "fleetshifttracker.firebasestorage.app",
   messagingSenderId: "276983000908",
   appId:             "1:276983000908:web:7948d3ccab92359795e9e9"
-};
-firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
-const db   = firebase.database();
+});
+var auth = firebase.auth();
+var db   = firebase.database();
 
-// ── Data ──────────────────────────────────────────────────
-const yards = [
+var yards = [
   {id:'east-tamaki',name:'East Tamaki',code:'CE',drivers:[
     {id:'ce1',name:'Joel',fleet:'269'},{id:'ce2',name:'Wallace',fleet:'683'},
     {id:'ce3',name:'Jameem',fleet:'280'},{id:'ce4',name:'Parnil',fleet:'394'},
@@ -276,87 +329,156 @@ const yards = [
     {id:'cp15',name:'Daba',fleet:'445'},
   ]},
 ];
-const allDrivers = yards.flatMap(y => y.drivers.map(d => Object.assign({}, d, {yardName:y.name, yardCode:y.code})));
+var allDrivers = yards.reduce(function(acc,y){return acc.concat(y.drivers.map(function(d){return Object.assign({},d,{yardName:y.name,yardCode:y.code});}));}, []);
 
-// ── State ─────────────────────────────────────────────────
 var liveShifts    = {};
 var liveLocations = {};
+var liveReturns   = {};
+var seenReturns   = JSON.parse(localStorage.getItem('fst_seen_returns')||'{}');
 var activeYardId  = yards[0].id;
 var searchQuery   = '';
 var mapInstance   = null;
 var mapMarkers    = {};
 var mapInfoWindow = null;
-var dbListenersStarted = false;
+var dbStarted     = false;
+var notifTimer    = null;
 
-// ── Auth ──────────────────────────────────────────────────
-auth.onAuthStateChanged(function(user) {
-  if (user) {
-    // Logged in — show app
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    document.getElementById('admin-name').textContent = user.displayName || user.email;
-    document.getElementById('admin-avatar').src = user.photoURL || '';
-    document.getElementById('admin-avatar').style.display = user.photoURL ? 'block' : 'none';
-    if (!dbListenersStarted) startDbListeners();
+// Auth
+auth.onAuthStateChanged(function(user){
+  if (user){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('admin-name').textContent=user.displayName||user.email;
+    if(user.photoURL){document.getElementById('admin-avatar').src=user.photoURL;document.getElementById('admin-avatar').style.display='block';}
+    if(!dbStarted) startDb();
   } else {
-    // Not logged in — show login
-    document.getElementById('login-screen').style.display = 'flex';
-    document.getElementById('app').style.display = 'none';
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('app').style.display='none';
   }
 });
+function signInWithGoogle(){
+  document.getElementById('login-error').style.display='none';
+  auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(){
+    document.getElementById('login-error').style.display='block';
+  });
+}
+function signOut(){ auth.signOut(); }
 
-function signInWithGoogle() {
-  document.getElementById('login-error').style.display = 'none';
-  document.getElementById('login-loading').style.display = 'block';
-  var provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(function(err) {
-    document.getElementById('login-loading').style.display = 'none';
-    document.getElementById('login-error').style.display = 'block';
-    console.error(err);
+// DB
+function startDb(){
+  dbStarted=true;
+  db.ref('shifts').on('value',function(snap){liveShifts=snap.val()||{};document.getElementById('connDot').className='conn-dot on';document.getElementById('connText').textContent='Live';render();updateMapMarkers();});
+  db.ref('locations').on('value',function(snap){liveLocations=snap.val()||{};updateMapMarkers();render();});
+  db.ref('returns').on('value',function(snap){
+    var data=snap.val()||{};
+    // Check for new returns to show popup
+    Object.keys(data).forEach(function(key){
+      if(!seenReturns[key]&&data[key].status==='pending'){
+        seenReturns[key]=true;
+        localStorage.setItem('fst_seen_returns',JSON.stringify(seenReturns));
+        showNotif(data[key],key);
+      }
+    });
+    liveReturns=data;
+    renderReturns();
+    updateReturnsBadge();
   });
 }
 
-function signOut() {
-  auth.signOut();
+// Tabs
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.tab-content').forEach(function(c){c.classList.remove('active');});
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.getElementById('content-'+tab).classList.add('active');
+  if(tab==='map'&&mapInstance){setTimeout(function(){google.maps.event.trigger(mapInstance,'resize');fitMapToMarkers();},100);}
+  if(tab==='returns') updateReturnsBadge();
 }
 
-// ── DB Listeners ──────────────────────────────────────────
-function startDbListeners() {
-  dbListenersStarted = true;
-  db.ref('shifts').on('value', function(snap) {
-    liveShifts = snap.val() || {};
-    document.getElementById('connDot').className = 'conn-dot on';
-    document.getElementById('connText').textContent = 'Live';
-    render();
-    updateMapMarkers();
-  });
-  db.ref('locations').on('value', function(snap) {
-    liveLocations = snap.val() || {};
-    updateMapMarkers();
-    render();
-  });
+// Notification popup
+function showNotif(r, key){
+  document.getElementById('notif-driver').textContent=r.driverName+' · Fleet '+r.fleet;
+  document.getElementById('notif-detail').innerHTML=
+    '<span>'+r.volume+'m³</span> · <span>'+r.mpa+'MPa</span> · Docket <span>'+r.docket+'</span><br>Returning to <span>'+r.returningToName+'</span>';
+  var popup=document.getElementById('notif-popup');
+  popup.dataset.key=key;
+  popup.classList.add('show');
+  clearTimeout(notifTimer);
+  notifTimer=setTimeout(function(){popup.classList.remove('show');},8000);
+}
+function closeNotif(){document.getElementById('notif-popup').classList.remove('show');}
+function notifClick(){closeNotif();switchTab('returns');}
+
+// Returns badge
+function updateReturnsBadge(){
+  var pending=Object.values(liveReturns).filter(function(r){return r.status==='pending';}).length;
+  var badge=document.getElementById('returns-badge');
+  badge.textContent=pending;
+  pending>0?badge.classList.add('show'):badge.classList.remove('show');
 }
 
-// ── Tabs ──────────────────────────────────────────────────
-function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
-  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
-  document.getElementById('tab-' + tab).classList.add('active');
-  document.getElementById('content-' + tab).classList.add('active');
-  if (tab === 'map' && mapInstance) {
-    setTimeout(function() {
-      google.maps.event.trigger(mapInstance, 'resize');
-      fitMapToMarkers();
-    }, 100);
+// Render returns
+function renderReturns(){
+  var list=Object.entries(liveReturns).sort(function(a,b){return b[1].submittedAt-a[1].submittedAt;});
+  if(list.length===0){
+    document.getElementById('returns-list').innerHTML='<div class="empty-returns"><div class="emoji">🪣</div>No return concrete reports yet.</div>';
+    return;
   }
+  document.getElementById('returns-list').innerHTML=list.map(function(entry,i){
+    var key=entry[0],r=entry[1];
+    var acked=r.status==='acknowledged';
+    var t=new Date(r.submittedAt);
+    var timeStr=t.toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'})+' · '+t.toLocaleDateString('en-NZ',{day:'numeric',month:'short'});
+    var hasLoc=r.lat&&r.lng;
+    return '<div class="return-card '+(acked?'acknowledged':'')+'" style="animation-delay:'+(i*.05)+'s">'+
+      '<div class="rc-top">'+
+        '<div><div class="rc-driver">'+r.driverName+'</div><div class="rc-fleet">Fleet #'+r.fleet+' · '+r.fromYardName+'</div></div>'+
+        '<div class="rc-time">'+timeStr+'</div>'+
+      '</div>'+
+      '<div class="rc-pills">'+
+        '<div class="rc-pill volume">🪣 '+r.volume+'m³</div>'+
+        '<div class="rc-pill mpa">'+r.mpa+' MPa</div>'+
+        '<div class="rc-pill yard">→ '+r.returningToName+'</div>'+
+      '</div>'+
+      '<div class="rc-docket">Docket: <span>'+r.docket+'</span></div>'+
+      (r.notes?'<div class="rc-notes">"'+r.notes+'"</div>':'')+
+      '<div class="rc-actions">'+
+        (hasLoc?'<button class="rc-btn map-btn" onclick="viewOnMap(\''+key+'\')">📍 View on Map</button>':'')+
+        (!acked?'<button class="rc-btn ack-btn" onclick="acknowledgeReturn(\''+key+'\')">✓ Acknowledge</button>':
+                '<span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted)">✓ Acknowledged</span>')+
+      '</div>'+
+    '</div>';
+  }).join('');
 }
 
-// ── Map ───────────────────────────────────────────────────
-function initMap() {
-  mapInstance = new google.maps.Map(document.getElementById('map'), {
-    center: {lat:-36.8485, lng:174.7633},
-    zoom: 11,
-    styles: [
+function acknowledgeReturn(key){
+  db.ref('returns/'+key+'/status').set('acknowledged');
+}
+
+function clearAcknowledged(){
+  Object.entries(liveReturns).forEach(function(entry){
+    if(entry[1].status==='acknowledged') db.ref('returns/'+entry[0]).remove();
+  });
+}
+
+function viewOnMap(key){
+  var r=liveReturns[key];
+  if(!r||!r.lat||!mapInstance)return;
+  switchTab('map');
+  setTimeout(function(){
+    mapInstance.setCenter({lat:r.lat,lng:r.lng});
+    mapInstance.setZoom(14);
+    // Find and click the driver's marker if it exists
+    var driverId=Object.keys(liveShifts).find(function(id){return liveShifts[id].driverName===r.driverName;});
+    if(driverId&&mapMarkers[driverId]) google.maps.event.trigger(mapMarkers[driverId],'click');
+  },150);
+}
+
+// Map
+function initMap(){
+  mapInstance=new google.maps.Map(document.getElementById('map'),{
+    center:{lat:-36.8485,lng:174.7633},zoom:11,
+    styles:[
       {elementType:'geometry',stylers:[{color:'#1a1d27'}]},
       {elementType:'labels.text.stroke',stylers:[{color:'#1a1d27'}]},
       {elementType:'labels.text.fill',stylers:[{color:'#8a9bb0'}]},
@@ -367,123 +489,105 @@ function initMap() {
       {featureType:'transit',elementType:'geometry',stylers:[{color:'#1e2130'}]},
       {featureType:'administrative',elementType:'geometry.stroke',stylers:[{color:'#2a3040'}]},
     ],
-    mapTypeControl: false,
-    streetViewControl: false,
+    mapTypeControl:false,streetViewControl:false,
   });
-  mapInfoWindow = new google.maps.InfoWindow();
+  mapInfoWindow=new google.maps.InfoWindow();
   updateMapMarkers();
 }
 
-function updateMapMarkers() {
-  if (!mapInstance) return;
-  var onShiftDrivers = allDrivers.filter(function(d) { return liveShifts[d.id] && liveShifts[d.id].onShift === true; });
+function hasReturn(driverName){
+  return Object.values(liveReturns).some(function(r){return r.driverName===driverName&&r.status==='pending';});
+}
 
-  // Remove old markers
-  Object.keys(mapMarkers).forEach(function(id) {
-    if (!liveShifts[id] || !liveShifts[id].onShift) {
-      mapMarkers[id].setMap(null);
-      delete mapMarkers[id];
-    }
+function updateMapMarkers(){
+  if(!mapInstance)return;
+  var onShift=allDrivers.filter(function(d){return liveShifts[d.id]&&liveShifts[d.id].onShift;});
+  Object.keys(mapMarkers).forEach(function(id){
+    if(!liveShifts[id]||!liveShifts[id].onShift){mapMarkers[id].setMap(null);delete mapMarkers[id];}
   });
-
-  onShiftDrivers.forEach(function(driver) {
-    var loc = liveLocations[driver.id];
-    var hasLoc = loc && loc.lat && loc.lng;
-    if (!hasLoc) return;
-
-    var pos = {lat: loc.lat, lng: loc.lng};
-    var shift = liveShifts[driver.id] || {};
-
-    if (mapMarkers[driver.id]) {
+  onShift.forEach(function(driver){
+    var loc=liveLocations[driver.id];
+    if(!loc||!loc.lat)return;
+    var hasRet=hasReturn(driver.name);
+    var color=hasRet?'#f5c842':'#00e5a0';
+    var pos={lat:loc.lat,lng:loc.lng};
+    var shift=liveShifts[driver.id]||{};
+    if(mapMarkers[driver.id]){
       mapMarkers[driver.id].setPosition(pos);
+      mapMarkers[driver.id].setIcon({path:google.maps.SymbolPath.CIRCLE,fillColor:color,fillOpacity:1,strokeColor:'#0d0f14',strokeWeight:2,scale:14});
     } else {
-      var marker = new google.maps.Marker({
-        position: pos,
-        map: mapInstance,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          fillColor: '#00e5a0',
-          fillOpacity: 1,
-          strokeColor: '#0d0f14',
-          strokeWeight: 2,
-          scale: 14,
-        },
-        label: {text: driver.fleet, color: '#0d0f14', fontSize: '11px', fontWeight: 'bold'},
-        title: driver.name,
-        animation: google.maps.Animation.DROP,
+      var marker=new google.maps.Marker({
+        position:pos,map:mapInstance,title:driver.name,
+        icon:{path:google.maps.SymbolPath.CIRCLE,fillColor:color,fillOpacity:1,strokeColor:'#0d0f14',strokeWeight:2,scale:14},
+        label:{text:driver.fleet,color:'#0d0f14',fontSize:'11px',fontWeight:'bold'},
+        animation:google.maps.Animation.DROP,
       });
-
-      marker.addListener('click', function() {
-        var updated = loc.updatedAt ? new Date(loc.updatedAt).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}) : '—';
-        var clockIn = shift.clockInTime ? new Date(shift.clockInTime).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}) : '—';
+      marker.addListener('click',function(){
+        var updated=loc.updatedAt?new Date(loc.updatedAt).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}):'—';
+        var clockIn=shift.clockInTime?new Date(shift.clockInTime).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}):'—';
+        var ret=Object.values(liveReturns).find(function(r){return r.driverName===driver.name&&r.status==='pending';});
+        var retHtml=ret?'<div style="margin-top:8px;padding:8px;background:#1e1a08;border-radius:8px;font-size:11px;">🪣 <strong style="color:#f5c842">Return Concrete</strong><br>'+ret.volume+'m³ · '+ret.mpa+'MPa · Docket '+ret.docket+'<br>→ '+ret.returningToName+'</div>':'';
         mapInfoWindow.setContent(
-          '<div style="font-family:\'DM Sans\',sans-serif;padding:4px;min-width:160px;">' +
-          '<div style="font-size:18px;font-weight:700;margin-bottom:2px;">' + driver.name + '</div>' +
-          '<div style="font-size:12px;color:#666;margin-bottom:8px;">Fleet #' + driver.fleet + ' · ' + driver.yardName + '</div>' +
-          '<div style="font-size:12px;color:#00b87a;">● On Shift since ' + clockIn + '</div>' +
-          '<div style="font-size:11px;color:#999;margin-top:4px;">📍 Updated ' + updated + '</div>' +
-          '<div style="font-size:10px;color:#bbb;margin-top:2px;">±' + Math.round(loc.accuracy||0) + 'm accuracy</div>' +
-          '</div>'
+          '<div style="font-family:\'DM Sans\',sans-serif;padding:4px;min-width:180px;">'+
+          '<div style="font-size:18px;font-weight:700;margin-bottom:2px;">'+driver.name+'</div>'+
+          '<div style="font-size:12px;color:#666;margin-bottom:8px;">Fleet #'+driver.fleet+' · '+driver.yardName+'</div>'+
+          '<div style="font-size:12px;color:#00b87a;">● On Shift since '+clockIn+'</div>'+
+          '<div style="font-size:11px;color:#999;margin-top:4px;">📍 Updated '+updated+'</div>'+
+          retHtml+'</div>'
         );
-        mapInfoWindow.open(mapInstance, marker);
+        mapInfoWindow.open(mapInstance,marker);
       });
-
-      mapMarkers[driver.id] = marker;
+      mapMarkers[driver.id]=marker;
     }
   });
-
-  var onCount  = onShiftDrivers.length;
-  var locCount = onShiftDrivers.filter(function(d) { return liveLocations[d.id] && liveLocations[d.id].lat; }).length;
-  document.getElementById('map-stats').innerHTML =
-    '<div class="map-stat on-s"><div class="dot"></div><span class="n">' + onCount + '</span> On Shift</div>' +
-    '<div class="map-stat on-s"><div class="dot" style="background:#4af0c0"></div><span class="n">' + locCount + '</span> Live GPS</div>';
+  var onCount=onShift.length;
+  var locCount=onShift.filter(function(d){return liveLocations[d.id]&&liveLocations[d.id].lat;}).length;
+  var retCount=Object.values(liveReturns).filter(function(r){return r.status==='pending';}).length;
+  document.getElementById('map-stats').innerHTML=
+    '<div class="map-stat on-s"><div class="dot"></div><span class="n">'+onCount+'</span> On Shift</div>'+
+    '<div class="map-stat on-s"><div class="dot" style="background:#4af0c0"></div><span class="n">'+locCount+'</span> Live GPS</div>'+
+    (retCount>0?'<div class="map-stat on-s"><div class="dot" style="background:#f5c842;box-shadow:0 0 5px #f5c842"></div><span class="n">'+retCount+'</span> Returns</div>':'');
 }
 
-function fitMapToMarkers() {
-  if (!mapInstance || Object.keys(mapMarkers).length === 0) return;
-  var bounds = new google.maps.LatLngBounds();
-  Object.values(mapMarkers).forEach(function(m) { bounds.extend(m.getPosition()); });
+function fitMapToMarkers(){
+  if(!mapInstance||Object.keys(mapMarkers).length===0)return;
+  var bounds=new google.maps.LatLngBounds();
+  Object.values(mapMarkers).forEach(function(m){bounds.extend(m.getPosition());});
   mapInstance.fitBounds(bounds);
-  if (Object.keys(mapMarkers).length === 1) mapInstance.setZoom(14);
+  if(Object.keys(mapMarkers).length===1) mapInstance.setZoom(14);
 }
 
-// ── List render ───────────────────────────────────────────
-function isOn(id) { return liveShifts[id] && liveShifts[id].onShift === true; }
-function hasLoc(id) { return !!(liveLocations[id] && liveLocations[id].lat); }
-function formatTime(ts) { return ts ? new Date(ts).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}) : null; }
-function getYardCounts(y) { var on=y.drivers.filter(function(d){return isOn(d.id);}).length; return{on:on,off:y.drivers.length-on}; }
+// List render
+function isOn(id){return liveShifts[id]&&liveShifts[id].onShift===true;}
+function hasLoc(id){return !!(liveLocations[id]&&liveLocations[id].lat);}
+function formatTime(ts){return ts?new Date(ts).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}):null;}
+function getYardCounts(y){var on=y.drivers.filter(function(d){return isOn(d.id);}).length;return{on:on,off:y.drivers.length-on};}
 
-function render() {
-  var yard = yards.find(function(y){return y.id===activeYardId;});
-  var q = searchQuery.toLowerCase();
-  var filtered = yard.drivers.filter(function(d){return d.name.toLowerCase().indexOf(q)>-1||d.fleet.indexOf(q)>-1;});
+function render(){
+  var yard=yards.find(function(y){return y.id===activeYardId;});
+  var q=searchQuery.toLowerCase();
+  var filtered=yard.drivers.filter(function(d){return d.name.toLowerCase().indexOf(q)>-1||d.fleet.indexOf(q)>-1;});
   var onD=filtered.filter(function(d){return isOn(d.id);}),offD=filtered.filter(function(d){return !isOn(d.id);});
-  var counts=getYardCounts(yard);
-
-  document.getElementById('onCount').textContent=counts.on;
-  document.getElementById('offCount').textContent=counts.off;
+  var c=getYardCounts(yard);
+  document.getElementById('onCount').textContent=c.on;
+  document.getElementById('offCount').textContent=c.off;
   document.getElementById('totalCount').textContent=yard.drivers.length;
-
   document.getElementById('yardSelector').innerHTML=yards.map(function(y){
     var c=getYardCounts(y);
     return '<button class="yard-btn '+(y.id===activeYardId?'active':'')+'" onclick="setYard(\''+y.id+'\')">'+
-      '<div class="yn">'+y.name+'</div>'+
-      '<div class="yc">'+y.code+' · '+y.drivers.length+' drivers</div>'+
-      '<div class="ym"><span class="on-n">'+c.on+' on</span><span>·</span><span class="off-n">'+c.off+' off</span></div>'+
-      '</button>';
+      '<div class="yn">'+y.name+'</div><div class="yc">'+y.code+' · '+y.drivers.length+' drivers</div>'+
+      '<div class="ym"><span class="on-n">'+c.on+' on</span><span>·</span><span class="off-n">'+c.off+' off</span></div></button>';
   }).join('');
-
-  renderGrid('onGrid', onD);
-  renderGrid('offGrid', offD);
-  document.getElementById('onLabel').style.display  = onD.length  ? '' : 'none';
-  document.getElementById('offLabel').style.display = offD.length ? '' : 'none';
+  renderGrid('onGrid',onD);renderGrid('offGrid',offD);
+  document.getElementById('onLabel').style.display=onD.length?'':'none';
+  document.getElementById('offLabel').style.display=offD.length?'':'none';
 }
 
-function renderGrid(id, drivers) {
-  document.getElementById(id).innerHTML = drivers.map(function(d,i){
-    var on=isOn(d.id), ct=liveShifts[d.id]&&liveShifts[d.id].clockInTime, loc=hasLoc(d.id);
-    return '<div class="driver-card '+(on?'on-shift':'off-shift')+'" style="animation-delay:'+(i*.04)+'s"'+
-      (on&&loc?' onclick="focusDriver(\''+d.id+'\')" title="Click to see on map"':'')+'>'+
+function renderGrid(id,drivers){
+  document.getElementById(id).innerHTML=drivers.map(function(d,i){
+    var on=isOn(d.id),ct=liveShifts[d.id]&&liveShifts[d.id].clockInTime,loc=hasLoc(d.id);
+    var ret=hasReturn(d.name);
+    return '<div class="driver-card '+(on?'on-shift':'off-shift')+'" style="animation-delay:'+(i*.04)+'s"'+(on&&loc?' onclick="focusDriver(\''+d.id+'\')" title="Click to see on map"':'')+'>'+
       '<div class="card-top">'+
         '<div><div class="fleet-num">'+d.fleet+'</div><div class="fleet-lbl">FLEET #</div></div>'+
         '<div class="status-badge"><div class="blink"></div>'+(on?'On Shift':'Off Shift')+'</div>'+
@@ -491,31 +595,26 @@ function renderGrid(id, drivers) {
       '<div class="driver-name">'+d.name+'</div>'+
       (on&&ct?'<div class="clock-time">Since <span>'+formatTime(ct)+'</span></div>':'')+
       (on&&loc?'<div class="has-location">📍 Live location</div>':'')+
-      '</div>';
+      (ret?'<div style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--yellow);margin-top:4px;">🪣 Return concrete pending</div>':'')+
+    '</div>';
   }).join('');
 }
 
-function focusDriver(driverId) {
-  var loc = liveLocations[driverId];
-  if (!loc || !mapInstance) return;
+function focusDriver(driverId){
+  var loc=liveLocations[driverId];if(!loc||!mapInstance)return;
   switchTab('map');
-  setTimeout(function() {
-    mapInstance.setCenter({lat:loc.lat, lng:loc.lng});
-    mapInstance.setZoom(15);
-    if (mapMarkers[driverId]) google.maps.event.trigger(mapMarkers[driverId], 'click');
-  }, 150);
+  setTimeout(function(){mapInstance.setCenter({lat:loc.lat,lng:loc.lng});mapInstance.setZoom(15);if(mapMarkers[driverId])google.maps.event.trigger(mapMarkers[driverId],'click');},150);
 }
 
-function setYard(id) { activeYardId=id; searchQuery=''; document.getElementById('searchInput').value=''; render(); }
-document.getElementById('searchInput').addEventListener('input', function(e){ searchQuery=e.target.value.trim(); render(); });
+function setYard(id){activeYardId=id;searchQuery='';document.getElementById('searchInput').value='';render();}
+document.getElementById('searchInput').addEventListener('input',function(e){searchQuery=e.target.value.trim();render();});
 
-// ── Clock ─────────────────────────────────────────────────
-function tick() {
+function tick(){
   var now=new Date();
   document.getElementById('clockTime').textContent=now.toLocaleTimeString('en-NZ',{hour12:false});
   document.getElementById('dateStr').textContent=now.toLocaleDateString('en-NZ',{weekday:'short',day:'numeric',month:'short',year:'numeric'}).toUpperCase();
 }
-tick(); setInterval(tick,1000);
+tick();setInterval(tick,1000);
 </script>
 </body>
 </html>
