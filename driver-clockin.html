@@ -5,100 +5,112 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Fleet Driver — Clock In</title>
+<title>Fleet Driver</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg:#0d0f14; --surface:#13161e; --border:#1e2330;
-    --on:#00e5a0; --off:#ff4d6d;
-    --on-dim:rgba(0,229,160,0.12); --off-dim:rgba(255,77,109,0.12);
-    --text:#e8eaf0; --muted:#5a6080; --yellow:#f5c842;
-  }
+  :root{--bg:#0d0f14;--surface:#13161e;--border:#1e2330;--on:#00e5a0;--off:#ff4d6d;--on-dim:rgba(0,229,160,0.12);--off-dim:rgba(255,77,109,0.12);--text:#e8eaf0;--muted:#5a6080;--yellow:#f5c842;--yellow-dim:rgba(245,200,66,0.12);}
   *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow-x:hidden;}
-
   .screen{display:none;min-height:100vh;flex-direction:column;}
   .screen.active{display:flex;}
-
   .nav{background:var(--surface);border-bottom:1px solid var(--border);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;}
   .nav-title{font-size:16px;font-weight:700;color:var(--text);}
   .nav-back{color:var(--on);font-family:'DM Mono',monospace;font-size:14px;background:none;border:none;cursor:pointer;padding:4px 0;}
   .nav-action{color:var(--muted);font-family:'DM Mono',monospace;font-size:13px;background:none;border:none;cursor:pointer;padding:4px 0;}
   .scroll-body{flex:1;overflow-y:auto;padding:20px;}
-
   .hero{padding:8px 0 28px;}
   .eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;color:var(--yellow);margin-bottom:8px;text-transform:uppercase;}
   .hero-title{font-family:'Bebas Neue',sans-serif;font-size:52px;line-height:.95;color:var(--text);}
   .hero-title span{color:var(--on);}
   .section-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;}
-
-  .yard-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color .15s,transform .1s;-webkit-user-select:none;}
+  .yard-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color .15s,transform .1s;}
   .yard-card:active{transform:scale(0.98);border-color:var(--yellow);}
   .yard-card-name{font-size:20px;font-weight:700;color:var(--text);margin-bottom:3px;}
-  .yard-card-code{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.1em;}
+  .yard-card-code{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
   .yard-card-arrow{color:var(--yellow);font-size:22px;font-weight:700;}
-
   .search-wrap{position:relative;margin-bottom:16px;}
-  .search-wrap input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:14px 16px 14px 44px;border-radius:12px;outline:none;transition:border-color .2s;-webkit-appearance:none;}
+  .search-wrap input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:14px 16px 14px 44px;border-radius:12px;outline:none;-webkit-appearance:none;}
   .search-wrap input:focus{border-color:var(--on);}
   .search-wrap input::placeholder{color:var(--muted);}
   .search-icon{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none;}
-
-  .driver-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color .15s,transform .1s;-webkit-user-select:none;}
+  .driver-row{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color .15s,transform .1s;}
   .driver-row:active{transform:scale(0.98);border-color:var(--on);}
   .driver-row-left{display:flex;align-items:center;gap:16px;}
   .driver-fleet{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--on);line-height:1;width:52px;}
   .driver-name{font-size:17px;font-weight:600;color:var(--text);}
   .driver-arrow{color:var(--muted);font-size:18px;}
 
+  /* Clock screen */
   .clock-screen-body{flex:1;display:flex;flex-direction:column;align-items:center;padding:24px 20px 40px;}
-
   .info-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px;width:100%;text-align:center;margin-bottom:16px;}
   .info-fleet{font-family:'Bebas Neue',sans-serif;font-size:64px;line-height:1;color:var(--on);}
   .info-fleet-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;margin-bottom:10px;}
   .info-name{font-size:26px;font-weight:700;color:var(--text);margin-bottom:12px;}
   .info-yard-badge{display:inline-flex;align-items:center;background:rgba(245,200,66,0.1);border:1px solid rgba(245,200,66,0.3);border-radius:100px;padding:6px 16px;font-family:'DM Mono',monospace;font-size:12px;color:var(--yellow);letter-spacing:1px;}
-
-  .status-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;border:1px solid;border-radius:100px;padding:10px 20px;transition:all .3s;}
+  .status-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;border:1px solid;border-radius:100px;padding:10px 20px;}
   .status-row.on{border-color:rgba(0,229,160,.3);background:var(--on-dim);}
   .status-row.off{border-color:rgba(255,77,109,.3);background:var(--off-dim);}
-  .status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;transition:background .3s;}
+  .status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
   .status-row.on .status-dot{background:var(--on);box-shadow:0 0 8px var(--on);animation:pulse 1.8s infinite;}
   .status-row.off .status-dot{background:var(--off);}
   .status-text{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;letter-spacing:2px;}
   .status-row.on .status-text{color:var(--on);}
   .status-row.off .status-text{color:var(--off);}
-
-  /* Location status pill */
   .loc-pill{display:flex;align-items:center;gap:7px;font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:16px;background:var(--surface);border:1px solid var(--border);border-radius:100px;padding:7px 14px;}
   .loc-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
   .loc-dot.active{background:var(--on);box-shadow:0 0 5px var(--on);animation:pulse 2s infinite;}
   .loc-dot.inactive{background:var(--muted);}
   .loc-dot.error{background:var(--off);}
-
   .elapsed-block{text-align:center;margin-bottom:16px;min-height:60px;}
   .elapsed-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
   .elapsed-time{font-family:'DM Mono',monospace;font-size:40px;font-weight:500;color:var(--text);margin:4px 0;}
   .elapsed-since{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);}
-
-  .clock-btn{width:100%;border:2px solid;border-radius:20px;padding:32px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:all .2s;background:transparent;-webkit-user-select:none;}
+  .clock-btn{width:100%;border:2px solid;border-radius:20px;padding:28px 20px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:transparent;margin-bottom:12px;}
   .clock-btn:active{transform:scale(0.97);}
   .clock-btn.clock-in{border-color:var(--on);background:var(--on-dim);}
   .clock-btn.clock-out{border-color:var(--off);background:var(--off-dim);}
-  .clock-btn-icon{font-size:44px;line-height:1;}
-  .clock-btn-text{font-family:'DM Mono',monospace;font-size:28px;font-weight:700;letter-spacing:3px;}
+  .clock-btn-icon{font-size:40px;line-height:1;}
+  .clock-btn-text{font-family:'DM Mono',monospace;font-size:26px;font-weight:700;letter-spacing:3px;}
   .clock-btn.clock-in .clock-btn-text{color:var(--on);}
   .clock-btn.clock-out .clock-btn-text{color:var(--off);}
   .clock-btn-sub{font-family:'DM Mono',monospace;font-size:12px;opacity:.6;}
   .clock-btn.clock-in .clock-btn-sub{color:var(--on);}
   .clock-btn.clock-out .clock-btn-sub{color:var(--off);}
 
+  /* Return concrete button */
+  .return-btn{width:100%;border:2px solid rgba(245,200,66,.4);border-radius:20px;padding:20px;display:flex;align-items:center;justify-content:center;gap:12px;cursor:pointer;background:var(--yellow-dim);margin-bottom:12px;}
+  .return-btn:active{transform:scale(0.97);}
+  .return-btn-icon{font-size:28px;}
+  .return-btn-text{font-family:'DM Mono',monospace;font-size:16px;font-weight:700;letter-spacing:2px;color:var(--yellow);}
+  .return-btn-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--yellow);opacity:.6;}
+
+  /* Return form screen */
+  .form-body{flex:1;overflow-y:auto;padding:20px 20px 40px;}
+  .form-title{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--yellow);margin-bottom:4px;}
+  .form-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:24px;letter-spacing:.1em;}
+  .field-group{margin-bottom:18px;}
+  .field-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:block;}
+  .field-input{width:100%;background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:16px;padding:14px 16px;border-radius:12px;outline:none;-webkit-appearance:none;}
+  .field-input:focus{border-color:var(--yellow);}
+  .field-input::placeholder{color:var(--muted);}
+  select.field-input{cursor:pointer;}
+  select.field-input option{background:var(--surface);color:var(--text);}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .submit-btn{width:100%;background:var(--yellow);color:#0d0f14;border:none;border-radius:16px;padding:18px;font-family:'DM Mono',monospace;font-size:16px;font-weight:700;letter-spacing:2px;cursor:pointer;margin-top:8px;}
+  .submit-btn:active{transform:scale(0.98);}
+  .submit-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+  /* Success screen */
+  .success-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center;}
+  .success-icon{font-size:64px;margin-bottom:20px;}
+  .success-title{font-family:'Bebas Neue',sans-serif;font-size:40px;color:var(--yellow);margin-bottom:8px;}
+  .success-sub{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);line-height:1.8;margin-bottom:32px;}
+  .success-back-btn{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 32px;font-family:'DM Mono',monospace;font-size:13px;color:var(--text);cursor:pointer;}
+
   .loading-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
   .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--on);border-radius:50%;animation:spin .8s linear infinite;}
-
   .toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface);border:1px solid var(--border);border-radius:100px;padding:12px 24px;font-family:'DM Mono',monospace;font-size:13px;color:var(--text);transition:transform .3s;z-index:100;white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,0.4);}
   .toast.show{transform:translateX(-50%) translateY(0);}
-
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
   @keyframes spin{to{transform:rotate(360deg)}}
 </style>
@@ -146,15 +158,71 @@
   </div>
 </div>
 
+<!-- SCREEN 4: RETURN CONCRETE FORM -->
+<div class="screen" id="screen-return">
+  <div class="nav">
+    <button class="nav-back" onclick="goTo('clock')">← Back</button>
+    <span class="nav-title">Return Concrete</span>
+    <div style="width:60px"></div>
+  </div>
+  <div class="form-body">
+    <div class="form-title">🪣 Return<br>Concrete</div>
+    <div class="form-sub" id="return-driver-label">Reporting as —</div>
+
+    <div class="field-group">
+      <label class="field-label">Docket Number</label>
+      <input type="text" class="field-input" id="f-docket" placeholder="e.g. 123456" autocomplete="off">
+    </div>
+
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Volume (m³)</label>
+        <input type="number" class="field-input" id="f-volume" placeholder="e.g. 0.7" step="0.1" min="0">
+      </div>
+      <div class="field-group">
+        <label class="field-label">MPa</label>
+        <input type="number" class="field-input" id="f-mpa" placeholder="e.g. 25" step="1" min="0">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Returning to Yard</label>
+      <select class="field-input" id="f-yard">
+        <option value="">Select yard…</option>
+        <option value="east-tamaki">East Tamaki (CE)</option>
+        <option value="drury">Drury (CD)</option>
+        <option value="ranui">Ranui (CR)</option>
+        <option value="penrose">Penrose (CP)</option>
+      </select>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Notes (optional)</label>
+      <input type="text" class="field-input" id="f-notes" placeholder="Any additional info…" autocomplete="off">
+    </div>
+
+    <button class="submit-btn" id="submit-btn" onclick="submitReturn()">📤 SEND REPORT</button>
+  </div>
+</div>
+
+<!-- SCREEN 5: SUCCESS -->
+<div class="screen" id="screen-success">
+  <div class="success-body">
+    <div class="success-icon">✅</div>
+    <div class="success-title">Report Sent!</div>
+    <div class="success-sub" id="success-detail">Your return concrete report<br>has been sent to the supervisor.</div>
+    <button class="success-back-btn" onclick="goTo('clock')">← Back to Shift</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
-
-<!-- Firebase compat (works without ES modules) -->
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-const firebaseConfig = {
+firebase.initializeApp({
   apiKey:            "AIzaSyCzvWNFjDlt-tjaAigMVZ9BicWCUa0guG0",
   authDomain:        "fleetshifttracker.firebaseapp.com",
   databaseURL:       "https://fleetshifttracker-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -162,11 +230,10 @@ const firebaseConfig = {
   storageBucket:     "fleetshifttracker.firebasestorage.app",
   messagingSenderId: "276983000908",
   appId:             "1:276983000908:web:7948d3ccab92359795e9e9"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+});
+var db = firebase.database();
 
-const yards = [
+var yards = [
   {id:'east-tamaki',name:'East Tamaki',code:'CE',drivers:[
     {id:'ce1',name:'Joel',fleet:'269'},{id:'ce2',name:'Wallace',fleet:'683'},
     {id:'ce3',name:'Jameem',fleet:'280'},{id:'ce4',name:'Parnil',fleet:'394'},
@@ -198,220 +265,257 @@ const yards = [
   ]},
 ];
 
-let activeYard      = null;
-let activeDriver    = null;
-let liveUnsub       = null;
-let elapsedTimer    = null;
-let locationWatcher = null;
+var activeYard      = null;
+var activeDriver    = null;
+var liveUnsub       = null;
+var elapsedTimer    = null;
+var locationWatcher = null;
+var lastKnownLoc    = null;
 
-// ── Session restore
-const saved = JSON.parse(localStorage.getItem('fst_session') || 'null');
+// Session restore
+var saved = JSON.parse(localStorage.getItem('fst_session') || 'null');
 if (saved) {
-  const yard   = yards.find(y => y.id === saved.yardId);
-  const driver = yard && yard.drivers.find(d => d.id === saved.driverId);
-  if (yard && driver) { activeYard = yard; activeDriver = driver; goTo('clock'); }
+  var sy = yards.find(function(y){return y.id===saved.yardId;});
+  var sd = sy && sy.drivers.find(function(d){return d.id===saved.driverId;});
+  if (sy && sd) { activeYard=sy; activeDriver=sd; goTo('clock'); }
 }
 
-// ── Navigation
+// Navigation
 function goTo(screen) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-' + screen).classList.add('active');
-  if (screen === 'yard')   renderYards();
-  if (screen === 'driver') renderDrivers();
-  if (screen === 'clock')  renderClock();
-  if (screen !== 'clock') {
-    if (liveUnsub) { liveUnsub(); liveUnsub = null; }
-    clearInterval(elapsedTimer); elapsedTimer = null;
-    stopLocation();
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById('screen-'+screen).classList.add('active');
+  if (screen==='yard')   renderYards();
+  if (screen==='driver') renderDrivers();
+  if (screen==='clock')  renderClock();
+  if (screen==='return') setupReturnForm();
+  if (screen!=='clock') {
+    if (liveUnsub){liveUnsub();liveUnsub=null;}
+    clearInterval(elapsedTimer);elapsedTimer=null;
   }
+  if (screen==='yard'||screen==='driver') stopLocation();
 }
 
 function logout() {
   stopLocation();
   localStorage.removeItem('fst_session');
-  activeYard = null; activeDriver = null;
+  activeYard=null;activeDriver=null;
   goTo('yard');
 }
 
-// ── Screen 1: Yards
+// Screen 1
 function renderYards() {
-  document.getElementById('yard-list').innerHTML = yards.map(y => `
-    <div class="yard-card" onclick="selectYard('${y.id}')">
-      <div>
-        <div class="yard-card-name">${y.name}</div>
-        <div class="yard-card-code">${y.code} · ${y.drivers.length} drivers</div>
-      </div>
-      <div class="yard-card-arrow">→</div>
-    </div>`).join('');
+  document.getElementById('yard-list').innerHTML = yards.map(function(y){
+    return '<div class="yard-card" onclick="selectYard(\''+y.id+'\')">'+
+      '<div><div class="yard-card-name">'+y.name+'</div><div class="yard-card-code">'+y.code+' · '+y.drivers.length+' drivers</div></div>'+
+      '<div class="yard-card-arrow">→</div></div>';
+  }).join('');
 }
 
 function selectYard(yardId) {
-  activeYard = yards.find(y => y.id === yardId);
+  activeYard = yards.find(function(y){return y.id===yardId;});
   document.getElementById('driver-screen-title').textContent = activeYard.name;
-  document.getElementById('driver-search').value = '';
+  document.getElementById('driver-search').value='';
   goTo('driver');
 }
 
-// ── Screen 2: Drivers
+// Screen 2
 function renderDrivers(filter) {
-  filter = filter || '';
-  const q = filter.toLowerCase();
-  const list = activeYard.drivers.filter(d =>
-    d.name.toLowerCase().indexOf(q) > -1 || d.fleet.indexOf(q) > -1
-  );
-  document.getElementById('driver-list').innerHTML = list.map(d => `
-    <div class="driver-row" onclick="selectDriver('${d.id}')">
-      <div class="driver-row-left">
-        <div class="driver-fleet">${d.fleet}</div>
-        <div class="driver-name">${d.name}</div>
-      </div>
-      <div class="driver-arrow">→</div>
-    </div>`).join('');
+  filter=filter||'';
+  var q=filter.toLowerCase();
+  var list=activeYard.drivers.filter(function(d){return d.name.toLowerCase().indexOf(q)>-1||d.fleet.indexOf(q)>-1;});
+  document.getElementById('driver-list').innerHTML = list.map(function(d){
+    return '<div class="driver-row" onclick="selectDriver(\''+d.id+'\')">'+
+      '<div class="driver-row-left"><div class="driver-fleet">'+d.fleet+'</div><div class="driver-name">'+d.name+'</div></div>'+
+      '<div class="driver-arrow">→</div></div>';
+  }).join('');
 }
 
-function filterDrivers() {
-  renderDrivers(document.getElementById('driver-search').value);
-}
+function filterDrivers() { renderDrivers(document.getElementById('driver-search').value); }
 
 function selectDriver(driverId) {
-  activeDriver = activeYard.drivers.find(d => d.id === driverId);
-  localStorage.setItem('fst_session', JSON.stringify({ yardId: activeYard.id, driverId: activeDriver.id }));
+  activeDriver = activeYard.drivers.find(function(d){return d.id===driverId;});
+  localStorage.setItem('fst_session', JSON.stringify({yardId:activeYard.id,driverId:activeDriver.id}));
   goTo('clock');
 }
 
-// ── Screen 3: Clock
+// Screen 3: Clock
 function renderClock() {
   document.getElementById('clock-screen-title').textContent = activeYard.name;
   document.getElementById('clock-body').innerHTML = '<div class="loading-wrap"><div class="spinner"></div></div>';
-
   if (liveUnsub) liveUnsub();
-  const driverRef = db.ref('shifts/' + activeDriver.id);
-  driverRef.on('value', function(snap) {
-    const data = snap.val() || {};
-    buildClockUI(data.onShift === true, data.clockInTime || null);
+  var driverRef = db.ref('shifts/'+activeDriver.id);
+  driverRef.on('value', function(snap){
+    var data = snap.val()||{};
+    buildClockUI(data.onShift===true, data.clockInTime||null);
   });
-  liveUnsub = function() { driverRef.off(); };
+  liveUnsub = function(){driverRef.off();};
 }
 
 function buildClockUI(isOn, clockInTime) {
   clearInterval(elapsedTimer);
-  document.getElementById('clock-body').innerHTML = `
-    <div class="info-card">
-      <div class="info-fleet">${activeDriver.fleet}</div>
-      <div class="info-fleet-label">FLEET #</div>
-      <div class="info-name">${activeDriver.name}</div>
-      <div class="info-yard-badge">${activeYard.code} · ${activeYard.name}</div>
-    </div>
-    <div class="status-row ${isOn ? 'on' : 'off'}">
-      <div class="status-dot"></div>
-      <div class="status-text">${isOn ? 'ON SHIFT' : 'OFF SHIFT'}</div>
-    </div>
-    <div class="loc-pill" id="loc-pill">
-      <div class="loc-dot inactive" id="loc-dot"></div>
-      <span id="loc-text">${isOn ? 'Getting location…' : 'Location inactive'}</span>
-    </div>
-    <div class="elapsed-block">
-      ${isOn && clockInTime ? `
-        <div class="elapsed-label">Time on shift</div>
-        <div class="elapsed-time" id="elapsed-time">00:00:00</div>
-        <div class="elapsed-since">Clocked in at ${formatTime(clockInTime)}</div>
-      ` : ''}
-    </div>
-    <button class="clock-btn ${isOn ? 'clock-out' : 'clock-in'}" onclick="handleToggle(${isOn}, ${clockInTime})">
-      <div class="clock-btn-icon">${isOn ? '⏹' : '▶'}</div>
-      <div class="clock-btn-text">${isOn ? 'CLOCK OUT' : 'CLOCK IN'}</div>
-      <div class="clock-btn-sub">${isOn ? 'Tap to finish your shift' : 'Tap to start your shift'}</div>
-    </button>
-  `;
-  if (isOn && clockInTime) {
+  document.getElementById('clock-body').innerHTML =
+    '<div class="info-card">'+
+      '<div class="info-fleet">'+activeDriver.fleet+'</div>'+
+      '<div class="info-fleet-label">FLEET #</div>'+
+      '<div class="info-name">'+activeDriver.name+'</div>'+
+      '<div class="info-yard-badge">'+activeYard.code+' · '+activeYard.name+'</div>'+
+    '</div>'+
+    '<div class="status-row '+(isOn?'on':'off')+'">'+
+      '<div class="status-dot"></div>'+
+      '<div class="status-text">'+(isOn?'ON SHIFT':'OFF SHIFT')+'</div>'+
+    '</div>'+
+    '<div class="loc-pill" id="loc-pill">'+
+      '<div class="loc-dot inactive" id="loc-dot"></div>'+
+      '<span id="loc-text">'+(isOn?'Getting location…':'Location inactive')+'</span>'+
+    '</div>'+
+    '<div class="elapsed-block">'+
+      (isOn&&clockInTime?
+        '<div class="elapsed-label">Time on shift</div>'+
+        '<div class="elapsed-time" id="elapsed-time">00:00:00</div>'+
+        '<div class="elapsed-since">Clocked in at '+formatTime(clockInTime)+'</div>'
+      :'')+
+    '</div>'+
+    (isOn?
+      '<button class="return-btn" onclick="goTo(\'return\')">'+
+        '<div class="return-btn-icon">🪣</div>'+
+        '<div><div class="return-btn-text">RETURN CONCRETE</div><div class="return-btn-sub">Tap to report return load</div></div>'+
+      '</button>'
+    :'')+
+    '<button class="clock-btn '+(isOn?'clock-out':'clock-in')+'" onclick="handleToggle('+isOn+','+clockInTime+')">'+
+      '<div class="clock-btn-icon">'+(isOn?'⏹':'▶')+'</div>'+
+      '<div class="clock-btn-text">'+(isOn?'CLOCK OUT':'CLOCK IN')+'</div>'+
+      '<div class="clock-btn-sub">'+(isOn?'Tap to finish your shift':'Tap to start your shift')+'</div>'+
+    '</button>';
+
+  if (isOn&&clockInTime) {
     updateElapsed(clockInTime);
-    elapsedTimer = setInterval(function() { updateElapsed(clockInTime); }, 1000);
+    elapsedTimer=setInterval(function(){updateElapsed(clockInTime);},1000);
     startLocation();
-  } else {
-    stopLocation();
-  }
+  } else { stopLocation(); }
 }
 
-// ── Location
+// Screen 4: Return form
+function setupReturnForm() {
+  document.getElementById('return-driver-label').textContent =
+    'Reporting as ' + activeDriver.name + ' · Fleet ' + activeDriver.fleet;
+  document.getElementById('f-docket').value='';
+  document.getElementById('f-volume').value='';
+  document.getElementById('f-mpa').value='';
+  document.getElementById('f-yard').value='';
+  document.getElementById('f-notes').value='';
+  // Pre-select driver's own yard
+  document.getElementById('f-yard').value = activeYard.id;
+}
+
+function submitReturn() {
+  var docket = document.getElementById('f-docket').value.trim();
+  var volume = document.getElementById('f-volume').value.trim();
+  var mpa    = document.getElementById('f-mpa').value.trim();
+  var yardId = document.getElementById('f-yard').value;
+  var notes  = document.getElementById('f-notes').value.trim();
+
+  if (!docket||!volume||!mpa||!yardId) {
+    showToast('⚠ Please fill in all required fields');
+    return;
+  }
+
+  var yardNames = {
+    'east-tamaki':'East Tamaki (CE)',
+    'drury':'Drury (CD)',
+    'ranui':'Ranui (CR)',
+    'penrose':'Penrose (CP)'
+  };
+
+  var btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+
+  var report = {
+    driverName:   activeDriver.name,
+    fleet:        activeDriver.fleet,
+    fromYardId:   activeYard.id,
+    fromYardName: activeYard.name,
+    returningTo:  yardId,
+    returningToName: yardNames[yardId]||yardId,
+    docket:       docket,
+    volume:       parseFloat(volume),
+    mpa:          parseFloat(mpa),
+    notes:        notes||'',
+    lat:          lastKnownLoc ? lastKnownLoc.lat : null,
+    lng:          lastKnownLoc ? lastKnownLoc.lng : null,
+    submittedAt:  Date.now(),
+    status:       'pending'
+  };
+
+  db.ref('returns').push(report).then(function(){
+    document.getElementById('success-detail').innerHTML =
+      'Docket <strong>'+docket+'</strong> · '+volume+'m³ · '+mpa+'MPa<br>'+
+      'Returning to <strong>'+yardNames[yardId]+'</strong><br>'+
+      'Report sent to supervisor.';
+    goTo('success');
+  }).catch(function(){
+    btn.disabled=false;
+    btn.textContent='📤 SEND REPORT';
+    showToast('⚠ Failed to send. Check connection.');
+  });
+}
+
+// Location
 function startLocation() {
-  if (!navigator.geolocation) { setLocStatus('error','GPS not supported'); return; }
+  if (!navigator.geolocation){setLocStatus('error','GPS not supported');return;}
   stopLocation();
   setLocStatus('inactive','Getting location…');
   locationWatcher = navigator.geolocation.watchPosition(
-    function(pos) {
-      var lat = pos.coords.latitude, lng = pos.coords.longitude, acc = pos.coords.accuracy;
-      setLocStatus('active', 'Sharing live · ±' + Math.round(acc) + 'm');
-      db.ref('locations/' + activeDriver.id).set({
-        lat: lat, lng: lng, accuracy: acc,
-        driverName: activeDriver.name, fleet: activeDriver.fleet,
-        yardId: activeYard.id, yardName: activeYard.name, yardCode: activeYard.code,
-        updatedAt: Date.now()
+    function(pos){
+      lastKnownLoc = {lat:pos.coords.latitude, lng:pos.coords.longitude};
+      setLocStatus('active','Sharing live · ±'+Math.round(pos.coords.accuracy)+'m');
+      db.ref('locations/'+activeDriver.id).set({
+        lat:pos.coords.latitude, lng:pos.coords.longitude,
+        accuracy:pos.coords.accuracy,
+        driverName:activeDriver.name, fleet:activeDriver.fleet,
+        yardId:activeYard.id, yardName:activeYard.name, yardCode:activeYard.code,
+        updatedAt:Date.now()
       });
     },
-    function(err) {
-      setLocStatus('error', err.code === 1 ? 'Location denied' : 'GPS unavailable');
-    },
-    { enableHighAccuracy: true, maximumAge: 15000, timeout: 10000 }
+    function(err){setLocStatus('error',err.code===1?'Location denied':'GPS unavailable');},
+    {enableHighAccuracy:true,maximumAge:15000,timeout:10000}
   );
 }
 
 function stopLocation() {
-  if (locationWatcher !== null) {
-    navigator.geolocation.clearWatch(locationWatcher);
-    locationWatcher = null;
-  }
+  if (locationWatcher!==null){navigator.geolocation.clearWatch(locationWatcher);locationWatcher=null;}
 }
 
-function setLocStatus(state, text) {
-  var dot = document.getElementById('loc-dot');
-  var label = document.getElementById('loc-text');
-  if (!dot || !label) return;
-  dot.className = 'loc-dot ' + (state === 'active' ? 'active' : state === 'error' ? 'error' : 'inactive');
-  label.textContent = text;
+function setLocStatus(state,text) {
+  var dot=document.getElementById('loc-dot'),label=document.getElementById('loc-text');
+  if(!dot||!label)return;
+  dot.className='loc-dot '+(state==='active'?'active':state==='error'?'error':'inactive');
+  label.textContent=text;
 }
 
-// ── Toggle
 function handleToggle(currentlyOn, clockInTime) {
-  var newStatus = !currentlyOn;
-  var msg = newStatus ? ('Clock in as ' + activeDriver.name + '?') : 'Clock out and finish your shift?';
-  if (!confirm(msg)) return;
-  db.ref('shifts/' + activeDriver.id).set({
-    onShift: newStatus,
-    driverName: activeDriver.name,
-    fleet: activeDriver.fleet,
-    yardId: activeYard.id,
-    yardName: activeYard.name,
-    yardCode: activeYard.code,
-    clockInTime: newStatus ? Date.now() : null,
-    lastUpdated: Date.now()
-  }).then(function() {
-    if (!newStatus) {
-      db.ref('locations/' + activeDriver.id).remove();
-      stopLocation();
-    }
-    showToast(newStatus ? '✓ Clocked in!' : '✓ Clocked out!');
-  }).catch(function() {
-    showToast('⚠ Connection error. Try again.');
-  });
+  var newStatus=!currentlyOn;
+  if (!confirm(newStatus?'Clock in as '+activeDriver.name+'?':'Clock out and finish your shift?')) return;
+  db.ref('shifts/'+activeDriver.id).set({
+    onShift:newStatus, driverName:activeDriver.name, fleet:activeDriver.fleet,
+    yardId:activeYard.id, yardName:activeYard.name, yardCode:activeYard.code,
+    clockInTime:newStatus?Date.now():null, lastUpdated:Date.now()
+  }).then(function(){
+    if(!newStatus){db.ref('locations/'+activeDriver.id).remove();stopLocation();}
+    showToast(newStatus?'✓ Clocked in!':'✓ Clocked out!');
+  }).catch(function(){showToast('⚠ Connection error.');});
 }
 
-// ── Helpers
 function updateElapsed(clockInTime) {
-  var el = document.getElementById('elapsed-time');
-  if (!el) return;
-  var diff = Date.now() - clockInTime;
-  var h = Math.floor(diff/3600000), m = Math.floor((diff%3600000)/60000), s = Math.floor((diff%60000)/1000);
-  el.textContent = pad(h) + ':' + pad(m) + ':' + pad(s);
+  var el=document.getElementById('elapsed-time');if(!el)return;
+  var diff=Date.now()-clockInTime;
+  var h=Math.floor(diff/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+  el.textContent=pad(h)+':'+pad(m)+':'+pad(s);
 }
-function formatTime(ts) { return ts ? new Date(ts).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}) : '—'; }
-function pad(n) { return String(n).padStart(2,'0'); }
-function showToast(msg) {
-  var t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
-  setTimeout(function() { t.classList.remove('show'); }, 2500);
-}
+function formatTime(ts){return ts?new Date(ts).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}):'—';}
+function pad(n){return String(n).padStart(2,'0');}
+function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
 
-// Init
 renderYards();
 </script>
 </body>
