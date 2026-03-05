@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fleet — Sign Up</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d0f14;--surface:#13161e;--border:#1e2330;--on:#00e5a0;--off:#ff4d6d;--text:#e8eaf0;--muted:#5a6080;--yellow:#f5c842;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+.box{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:40px 36px;max-width:420px;width:100%;}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:40px;line-height:.9;margin-bottom:4px;}
+.logo span{color:var(--on);}
+.sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-bottom:32px;}
+.divider{height:1px;background:var(--border);margin-bottom:24px;}
+.section-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.field{margin-bottom:14px;}
+.field input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;padding:13px 14px;border-radius:12px;outline:none;}
+.field input:focus{border-color:var(--on);}
+.field input::placeholder{color:var(--muted);}
+.role-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;}
+.role-btn{background:var(--bg);border:2px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center;cursor:pointer;transition:all .15s;}
+.role-btn:hover{border-color:var(--muted);}
+.role-btn.selected.driver{border-color:var(--on);background:rgba(0,229,160,.08);}
+.role-btn.selected.dispatcher{border-color:var(--yellow);background:rgba(245,200,66,.08);}
+.role-btn.selected.collections{border-color:#a78bfa;background:rgba(167,139,250,.08);}
+.role-icon{font-size:28px;margin-bottom:6px;}
+.role-name{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.05em;color:var(--muted);}
+.role-btn.selected .role-name{color:var(--text);}
+.submit-btn{width:100%;background:var(--on);color:#0d0f14;border:none;border-radius:12px;padding:15px;font-family:'DM Mono',monospace;font-size:14px;font-weight:700;letter-spacing:2px;cursor:pointer;margin-bottom:14px;}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed;}
+.login-link{text-align:center;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);}
+.login-link a{color:var(--on);text-decoration:none;}
+.msg{font-family:'DM Mono',monospace;font-size:12px;text-align:center;padding:10px;border-radius:8px;margin-bottom:14px;display:none;}
+.msg.error{color:var(--off);background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.2);}
+.msg.success{color:var(--on);background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.2);}
+.pending-notice{background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.2);border-radius:12px;padding:16px;text-align:center;display:none;}
+.pending-notice .icon{font-size:32px;margin-bottom:8px;}
+.pending-notice .title{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--yellow);margin-bottom:6px;}
+.pending-notice .text{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);line-height:1.8;}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">Fleet<br><span>Ops</span></div>
+  <div class="sub">Create your account</div>
+  <div class="divider"></div>
+
+  <div id="signup-form">
+    <div class="msg" id="msg"></div>
+
+    <div class="section-label">Your details</div>
+    <div class="field"><input type="text" id="fullname" placeholder="Full name" autocomplete="name"></div>
+    <div class="field"><input type="email" id="email" placeholder="Email address" autocomplete="email"></div>
+    <div class="field"><input type="password" id="password" placeholder="Password (min 6 characters)" autocomplete="new-password"></div>
+
+    <div class="section-label" style="margin-top:20px">Select your role</div>
+    <div class="role-grid">
+      <div class="role-btn driver" id="role-driver" onclick="selectRole('driver')">
+        <div class="role-icon">🚛</div>
+        <div class="role-name">Driver</div>
+      </div>
+      <div class="role-btn dispatcher" id="role-dispatcher" onclick="selectRole('dispatcher')">
+        <div class="role-icon">⚡</div>
+        <div class="role-name">Dispatcher</div>
+      </div>
+      <div class="role-btn collections" id="role-collections" onclick="selectRole('collections')">
+        <div class="role-icon">🧪</div>
+        <div class="role-name">Collections</div>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submit-btn" onclick="doSignup()" disabled>CREATE ACCOUNT</button>
+    <div class="login-link">Already have an account? <a href="login.html">Sign in</a></div>
+  </div>
+
+  <div class="pending-notice" id="pending-notice">
+    <div class="icon">⏳</div>
+    <div class="title">Pending Approval</div>
+    <div class="text">Your collections account has been created.<br>An admin needs to approve your access<br>before you can log in.</div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyCzvWNFjDlt-tjaAigMVZ9BicWCUa0guG0",
+  authDomain:"fleetshifttracker.firebaseapp.com",
+  databaseURL:"https://fleetshifttracker-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"fleetshifttracker",
+  storageBucket:"fleetshifttracker.firebasestorage.app",
+  messagingSenderId:"276983000908",
+  appId:"1:276983000908:web:7948d3ccab92359795e9e9"
+});
+var auth=firebase.auth(),db=firebase.database();
+var selectedRole=null;
+
+function selectRole(role){
+  selectedRole=role;
+  document.querySelectorAll('.role-btn').forEach(function(b){b.classList.remove('selected');});
+  document.getElementById('role-'+role).classList.add('selected');
+  checkReady();
+}
+function checkReady(){
+  var name=document.getElementById('fullname').value.trim();
+  var email=document.getElementById('email').value.trim();
+  var pass=document.getElementById('password').value.trim();
+  document.getElementById('submit-btn').disabled=!(name&&email&&pass&&selectedRole);
+}
+['fullname','email','password'].forEach(function(id){document.getElementById(id).addEventListener('input',checkReady);});
+
+function showMsg(type,text){
+  var el=document.getElementById('msg');
+  el.className='msg '+type;
+  el.textContent=text;
+  el.style.display='block';
+}
+
+function doSignup(){
+  var name=document.getElementById('fullname').value.trim();
+  var email=document.getElementById('email').value.trim();
+  var pass=document.getElementById('password').value.trim();
+  if(pass.length<6){showMsg('error','Password must be at least 6 characters.');return;}
+  var btn=document.getElementById('submit-btn');
+  btn.disabled=true;btn.textContent='Creating account…';
+
+  auth.createUserWithEmailAndPassword(email,pass).then(function(cred){
+    var uid=cred.user.uid;
+    // Collections requires admin approval
+    var approved=selectedRole!=='collections';
+    return db.ref('users/'+uid).set({
+      name:name,email:email,role:selectedRole,
+      approved:approved,createdAt:Date.now()
+    }).then(function(){
+      if(selectedRole==='collections'){
+        // Sign them out immediately — need approval first
+        auth.signOut();
+        document.getElementById('signup-form').style.display='none';
+        document.getElementById('pending-notice').style.display='block';
+      } else {
+        // Redirect based on role
+        window.location.href=selectedRole==='dispatcher'?'dispatcher.html':'driver-clockin.html';
+      }
+    });
+  }).catch(function(err){
+    btn.disabled=false;btn.textContent='CREATE ACCOUNT';
+    var msgs={
+      'auth/email-already-in-use':'This email is already registered. Try signing in.',
+      'auth/invalid-email':'Please enter a valid email address.',
+      'auth/weak-password':'Password is too weak. Use at least 6 characters.',
+    };
+    showMsg('error',msgs[err.code]||err.message);
+  });
+}
+</script>
+</body>
+</html>
