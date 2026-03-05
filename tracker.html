@@ -158,6 +158,10 @@ footer{margin-top:40px;text-align:center;font-family:'DM Mono',monospace;font-si
 .btc-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--off);letter-spacing:.1em;text-transform:uppercase;}
 .btc-time{font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:var(--off);}
 .btc-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
+.eta-card{background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.25);border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;}
+.eta-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--on);letter-spacing:.1em;text-transform:uppercase;}
+.eta-time{font-family:'DM Mono',monospace;font-size:22px;font-weight:700;color:var(--on);}
+.eta-live{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
 .rc-actions{display:flex;gap:8px;flex-wrap:wrap;}
 .rc-btn{font-family:'DM Mono',monospace;font-size:11px;border-radius:100px;padding:6px 14px;cursor:pointer;border:1px solid;}
 .rc-btn.map-btn{color:var(--on);border-color:rgba(0,229,160,.3);background:var(--on-dim);}
@@ -661,6 +665,18 @@ function renderReturns(){
     var bowlSecs=r.bowlDurationSeconds||0;
     var bh=Math.floor(bowlSecs/3600),bm=Math.floor((bowlSecs%3600)/60),bs=bowlSecs%60;
     var bowlStr=pad(bh)+':'+pad(bm)+':'+pad(bs);
+    // ETA block
+    var etaHtml='';
+    if(!acked&&r.etaTimestamp){
+      var minsLeft=Math.max(0,Math.ceil((r.etaTimestamp-Date.now())/60000));
+      var etaTimeStr=new Date(r.etaTimestamp).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'});
+      var etaDisplay=minsLeft<=0?'Arriving now':'~'+minsLeft+' min';
+      etaHtml='<div class="eta-card"><div>'+
+        '<div class="eta-label">🚛 Estimated Arrival</div>'+
+        '<div class="eta-time" id="eta-cd-'+key+'">'+etaDisplay+'</div>'+
+        '<div class="eta-live">Due '+etaTimeStr+' · '+r.returningToName+'</div>'+
+      '</div></div>';
+    }
     return '<div class="return-card '+(acked?'acknowledged':'')+'" style="animation-delay:'+(i*.05)+'s">'+
       '<div class="rc-top">'+
         '<div><div class="rc-driver">'+r.driverName+'</div><div class="rc-fleet">Fleet #'+r.fleet+' · '+r.fromYardName+'</div></div>'+
@@ -671,17 +687,31 @@ function renderReturns(){
         '<div class="rc-pill yard">→ '+r.returningToName+'</div>'+
         (r.docket&&r.docket!=='—'?'<div class="rc-pill" style="color:var(--muted);border-color:var(--border)">Docket '+r.docket+'</div>':'')+
       '</div>'+
+      etaHtml+
       '<div class="bowl-timer-card">'+
         '<div><div class="btc-label">🪣 Concrete in Bowl</div><div class="btc-time">'+bowlStr+'</div><div class="btc-sub">Time from yard departure to pour end</div></div>'+
       '</div>'+
       (r.notes?'<div style="font-size:13px;color:var(--muted);font-style:italic;margin-bottom:8px;">"'+r.notes+'"</div>':'')+
       '<div class="rc-actions">'+
-        (r.lat&&r.lng?'<button class="rc-btn map-btn" onclick="viewReturnOnMap(\''+key+'\')">📍 View on Map</button>':'')+
-        (!acked?'<button class="rc-btn ack-btn" onclick="acknowledgeReturn(\''+key+'\')">✓ Acknowledge</button>':
+        (r.lat&&r.lng?'<button class="rc-btn map-btn" onclick="viewReturnOnMap(''+key+'')">📍 View on Map</button>':'')+
+        (!acked?'<button class="rc-btn ack-btn" onclick="acknowledgeReturn(''+key+'')">✓ Acknowledge</button>':
                 '<span style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--muted)">✓ Done</span>')+
       '</div>'+
     '</div>';
   }).join('');
+  // Live ETA countdown - refreshes every 30 seconds
+  clearInterval(window._etaTimer);
+  window._etaTimer=setInterval(function(){
+    Object.entries(liveReturns).forEach(function(entry){
+      var key=entry[0],r=entry[1];
+      if(r.status==='acknowledged'||!r.etaTimestamp)return;
+      var el=document.getElementById('eta-cd-'+key);
+      if(!el)return;
+      var minsLeft=Math.max(0,Math.ceil((r.etaTimestamp-Date.now())/60000));
+      el.textContent=minsLeft<=0?'Arriving now':'~'+minsLeft+' min';
+      el.style.color=minsLeft<=5?'var(--yellow)':'var(--on)';
+    });
+  },30000);
 }
 
 function acknowledgeReturn(key){db.ref('returns/'+key+'/status').set('acknowledged');updateBadges();}
