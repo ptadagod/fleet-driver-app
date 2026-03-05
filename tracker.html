@@ -3,18 +3,44 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fleet Shift Tracker — Live</title>
+<title>Fleet Shift Tracker — Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#0d0f14;--surface:#13161e;--border:#1e2330;--on:#00e5a0;--off:#ff4d6d;--on-dim:rgba(0,229,160,0.12);--off-dim:rgba(255,77,109,0.12);--text:#e8eaf0;--muted:#5a6080;--yellow:#f5c842;}
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;}
 
-  /* ── TABS ── */
-  .tab-bar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;position:sticky;top:0;z-index:20;}
-  .tab-btn{flex:1;padding:16px;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;}
+  /* ── LOGIN SCREEN ── */
+  #login-screen{display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px;}
+  .login-box{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:48px 40px;max-width:400px;width:100%;text-align:center;}
+  .login-logo{font-family:'Bebas Neue',sans-serif;font-size:48px;line-height:.9;margin-bottom:6px;}
+  .login-logo span{color:var(--on);}
+  .login-sub{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-bottom:40px;}
+  .login-divider{height:1px;background:var(--border);margin-bottom:32px;}
+  .login-label{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:16px;}
+  .google-btn{display:flex;align-items:center;justify-content:center;gap:12px;width:100%;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:14px 20px;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s;box-shadow:0 2px 8px rgba(0,0,0,0.3);}
+  .google-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,0.4);}
+  .google-btn:active{transform:scale(0.98);}
+  .google-icon{width:20px;height:20px;flex-shrink:0;}
+  .login-error{margin-top:16px;font-family:'DM Mono',monospace;font-size:12px;color:var(--off);display:none;}
+  .login-loading{margin-top:16px;font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);display:none;}
+
+  /* ── APP (hidden until logged in) ── */
+  #app{display:none;}
+
+  /* ── TOP BAR ── */
+  .top-bar{background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:sticky;top:0;z-index:20;}
+  .tab-bar-inner{display:flex;flex:1;}
+  .tab-btn{padding:16px 20px;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;}
   .tab-btn.active{color:var(--on);border-bottom-color:var(--on);}
-  .tab-content{display:none;} .tab-content.active{display:block;}
+  .admin-bar{display:flex;align-items:center;gap:12px;padding:8px 0;}
+  .admin-avatar{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);}
+  .admin-name{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .signout-btn{font-family:'DM Mono',monospace;font-size:11px;color:var(--off);background:none;border:1px solid rgba(255,77,109,.3);border-radius:100px;padding:5px 12px;cursor:pointer;transition:all .15s;}
+  .signout-btn:hover{background:var(--off-dim);}
+
+  .tab-content{display:none;}
+  .tab-content.active{display:block;}
 
   /* ── MAP TAB ── */
   #map-container{position:relative;}
@@ -27,7 +53,6 @@
   .map-stat{background:rgba(13,15,20,0.92);border:1px solid var(--border);border-radius:100px;padding:6px 14px;font-family:'DM Mono',monospace;font-size:11px;display:flex;align-items:center;gap:6px;backdrop-filter:blur(8px);}
   .map-stat .dot{width:7px;height:7px;border-radius:50%;}
   .map-stat.on-s .dot{background:var(--on);box-shadow:0 0 5px var(--on);}
-  .map-stat.off-s .dot{background:var(--off);}
   .map-stat .n{color:var(--text);font-weight:600;margin-right:2px;}
 
   /* ── LIST TAB ── */
@@ -92,7 +117,7 @@
   .driver-name{font-size:16px;font-weight:600;color:var(--text);margin-bottom:4px;}
   .clock-time{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);}
   .clock-time span{color:var(--on);}
-  .has-location{font-family:'DM Mono',monospace;font-size:10px;color:var(--on);margin-top:4px;display:flex;align-items:center;gap:4px;}
+  .has-location{font-family:'DM Mono',monospace;font-size:10px;color:var(--on);margin-top:4px;}
 
   .section-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;margin-top:8px;display:flex;align-items:center;gap:12px;}
   .section-label::after{content:'';flex:1;height:1px;background:var(--border);}
@@ -105,78 +130,107 @@
 </head>
 <body>
 
-<!-- Tab Bar -->
-<div class="tab-bar">
-  <button class="tab-btn active" onclick="switchTab('list')" id="tab-list">📋 Shift List</button>
-  <button class="tab-btn" onclick="switchTab('map')" id="tab-map">🗺️ Live Map</button>
+<!-- ── LOGIN SCREEN ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">Fleet<br><span>Shift</span><br>Tracker</div>
+    <div class="login-sub">Admin Portal</div>
+    <div class="login-divider"></div>
+    <div class="login-label">Sign in to continue</div>
+    <button class="google-btn" onclick="signInWithGoogle()">
+      <svg class="google-icon" viewBox="0 0 24 24">
+        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+      </svg>
+      Sign in with Google
+    </button>
+    <div class="login-error" id="login-error">Sign in failed. Please try again.</div>
+    <div class="login-loading" id="login-loading">Signing in…</div>
+  </div>
 </div>
 
-<!-- MAP TAB -->
-<div class="tab-content active" id="content-map" style="display:none;">
-  <div id="map-container">
-    <div class="map-stats" id="map-stats"></div>
-    <div id="map"></div>
-    <div class="map-legend">
-      <div class="map-legend-title">Legend</div>
-      <div class="legend-row"><div class="legend-dot" style="background:#00e5a0"></div> On Shift · Live Location</div>
-      <div class="legend-row"><div class="legend-dot" style="background:#ff4d6d"></div> On Shift · No GPS Yet</div>
-      <div class="legend-row"><div class="legend-dot" style="background:#5a6080"></div> Off Shift</div>
+<!-- ── APP ── -->
+<div id="app">
+  <!-- Top bar with tabs + admin info -->
+  <div class="top-bar">
+    <div class="tab-bar-inner">
+      <button class="tab-btn active" onclick="switchTab('list')" id="tab-list">📋 Shift List</button>
+      <button class="tab-btn" onclick="switchTab('map')" id="tab-map">🗺️ Live Map</button>
+    </div>
+    <div class="admin-bar">
+      <img class="admin-avatar" id="admin-avatar" src="" alt="">
+      <span class="admin-name" id="admin-name"></span>
+      <button class="signout-btn" onclick="signOut()">Sign out</button>
+    </div>
+  </div>
+
+  <!-- MAP TAB -->
+  <div class="tab-content" id="content-map">
+    <div id="map-container">
+      <div class="map-stats" id="map-stats"></div>
+      <div id="map"></div>
+      <div class="map-legend">
+        <div class="map-legend-title">Legend</div>
+        <div class="legend-row"><div class="legend-dot" style="background:#00e5a0"></div>On Shift · Live GPS</div>
+        <div class="legend-row"><div class="legend-dot" style="background:#ff4d6d"></div>On Shift · No GPS</div>
+        <div class="legend-row"><div class="legend-dot" style="background:#5a6080"></div>Off Shift</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIST TAB -->
+  <div class="tab-content active" id="content-list">
+    <div class="container">
+      <div class="header-top">
+        <div>
+          <div class="eyebrow">WE 8th March 2026 · Live Shift Board</div>
+          <h1>Fleet<br><span>Shift</span><br>Tracker</h1>
+        </div>
+        <div class="header-right">
+          <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+          <div class="live-clock">
+            <div class="date-str" id="dateStr">—</div>
+            <strong id="clockTime">--:--:--</strong>
+            Live Clock
+          </div>
+          <div class="conn-status">
+            <div class="conn-dot off" id="connDot"></div>
+            <span id="connText">Connecting…</span>
+          </div>
+        </div>
+      </div>
+      <div class="yard-label">Select Yard</div>
+      <div class="yard-selector" id="yardSelector"></div>
+      <div class="stats-bar">
+        <div class="stat-pill on-c"><div class="dot"></div><span><span class="num" id="onCount">0</span> On Shift</span></div>
+        <div class="stat-pill off-c"><div class="dot"></div><span><span class="num" id="offCount">0</span> Off Shift</span></div>
+        <div class="stat-pill tot-c"><div class="dot"></div><span><span class="num" id="totalCount">0</span> Total</span></div>
+      </div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search driver name or fleet #…">
+      </div>
+      <div class="section-label" id="onLabel">On Shift</div>
+      <div class="drivers-grid" id="onGrid"></div>
+      <div class="section-label" id="offLabel" style="margin-top:24px">Off Shift</div>
+      <div class="drivers-grid" id="offGrid"></div>
+      <footer>Fleet Operations · Admin Portal · 2026</footer>
     </div>
   </div>
 </div>
 
-<!-- LIST TAB -->
-<div class="tab-content active" id="content-list">
-  <div class="container">
-    <div class="header-top">
-      <div>
-        <div class="eyebrow">WE 8th March 2026 · Live Shift Board</div>
-        <h1>Fleet<br><span>Shift</span><br>Tracker</h1>
-      </div>
-      <div class="header-right">
-        <div class="live-badge"><div class="live-dot"></div>LIVE</div>
-        <div class="live-clock">
-          <div class="date-str" id="dateStr">—</div>
-          <strong id="clockTime">--:--:--</strong>
-          Live Clock
-        </div>
-        <div class="conn-status">
-          <div class="conn-dot off" id="connDot"></div>
-          <span id="connText">Connecting…</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="yard-label">Select Yard</div>
-    <div class="yard-selector" id="yardSelector"></div>
-
-    <div class="stats-bar">
-      <div class="stat-pill on-c"><div class="dot"></div><span><span class="num" id="onCount">0</span> On Shift</span></div>
-      <div class="stat-pill off-c"><div class="dot"></div><span><span class="num" id="offCount">0</span> Off Shift</span></div>
-      <div class="stat-pill tot-c"><div class="dot"></div><span><span class="num" id="totalCount">0</span> Total</span></div>
-    </div>
-
-    <div class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input type="text" id="searchInput" placeholder="Search driver name or fleet #…">
-    </div>
-
-    <div class="section-label" id="onLabel">On Shift</div>
-    <div class="drivers-grid" id="onGrid"></div>
-    <div class="section-label" id="offLabel" style="margin-top:24px">Off Shift</div>
-    <div class="drivers-grid" id="offGrid"></div>
-
-    <footer>Fleet Operations · Live Shift Board · 2026</footer>
-  </div>
-</div>
+<!-- Firebase compat -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <!-- Google Maps -->
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBt_8TZ4cBONkK_OSJurYnBCJSm2Zpi8uc&callback=initMap" async defer></script>
 
-<script type="module">
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
-
+<script>
+// ── Firebase init ─────────────────────────────────────────
 const firebaseConfig = {
   apiKey:            "AIzaSyCzvWNFjDlt-tjaAigMVZ9BicWCUa0guG0",
   authDomain:        "fleetshifttracker.firebaseapp.com",
@@ -186,9 +240,11 @@ const firebaseConfig = {
   messagingSenderId: "276983000908",
   appId:             "1:276983000908:web:7948d3ccab92359795e9e9"
 };
-const app = initializeApp(firebaseConfig);
-const db  = getDatabase(app);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.database();
 
+// ── Data ──────────────────────────────────────────────────
 const yards = [
   {id:'east-tamaki',name:'East Tamaki',code:'CE',drivers:[
     {id:'ce1',name:'Joel',fleet:'269'},{id:'ce2',name:'Wallace',fleet:'683'},
@@ -220,185 +276,201 @@ const yards = [
     {id:'cp15',name:'Daba',fleet:'445'},
   ]},
 ];
+const allDrivers = yards.flatMap(y => y.drivers.map(d => Object.assign({}, d, {yardName:y.name, yardCode:y.code})));
 
-const allDrivers = yards.flatMap(y => y.drivers.map(d => ({...d, yardName:y.name, yardCode:y.code})));
+// ── State ─────────────────────────────────────────────────
+var liveShifts    = {};
+var liveLocations = {};
+var activeYardId  = yards[0].id;
+var searchQuery   = '';
+var mapInstance   = null;
+var mapMarkers    = {};
+var mapInfoWindow = null;
+var dbListenersStarted = false;
 
-let liveShifts    = {};
-let liveLocations = {};
-let activeYardId  = yards[0].id;
-let searchQuery   = '';
-let mapInstance   = null;
-let mapMarkers    = {};
-let mapInfoWindow = null;
-
-// ── Firebase listeners ────────────────────────────────────
-onValue(ref(db, 'shifts'), snap => {
-  liveShifts = snap.val() || {};
-  document.getElementById('connDot').className = 'conn-dot on';
-  document.getElementById('connText').textContent = 'Live';
-  render();
-  updateMapMarkers();
+// ── Auth ──────────────────────────────────────────────────
+auth.onAuthStateChanged(function(user) {
+  if (user) {
+    // Logged in — show app
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('admin-name').textContent = user.displayName || user.email;
+    document.getElementById('admin-avatar').src = user.photoURL || '';
+    document.getElementById('admin-avatar').style.display = user.photoURL ? 'block' : 'none';
+    if (!dbListenersStarted) startDbListeners();
+  } else {
+    // Not logged in — show login
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
 });
 
-onValue(ref(db, 'locations'), snap => {
-  liveLocations = snap.val() || {};
-  updateMapMarkers();
-  render();
-});
+function signInWithGoogle() {
+  document.getElementById('login-error').style.display = 'none';
+  document.getElementById('login-loading').style.display = 'block';
+  var provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(function(err) {
+    document.getElementById('login-loading').style.display = 'none';
+    document.getElementById('login-error').style.display = 'block';
+    console.error(err);
+  });
+}
+
+function signOut() {
+  auth.signOut();
+}
+
+// ── DB Listeners ──────────────────────────────────────────
+function startDbListeners() {
+  dbListenersStarted = true;
+  db.ref('shifts').on('value', function(snap) {
+    liveShifts = snap.val() || {};
+    document.getElementById('connDot').className = 'conn-dot on';
+    document.getElementById('connText').textContent = 'Live';
+    render();
+    updateMapMarkers();
+  });
+  db.ref('locations').on('value', function(snap) {
+    liveLocations = snap.val() || {};
+    updateMapMarkers();
+    render();
+  });
+}
 
 // ── Tabs ──────────────────────────────────────────────────
-window.switchTab = (tab) => {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c => { c.style.display='none'; c.classList.remove('active'); });
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
   document.getElementById('tab-' + tab).classList.add('active');
-  document.getElementById('content-' + tab).style.display = 'block';
+  document.getElementById('content-' + tab).classList.add('active');
   if (tab === 'map' && mapInstance) {
-    setTimeout(() => {
+    setTimeout(function() {
       google.maps.event.trigger(mapInstance, 'resize');
       fitMapToMarkers();
     }, 100);
   }
-};
+}
 
 // ── Map ───────────────────────────────────────────────────
-window.initMap = () => {
+function initMap() {
   mapInstance = new google.maps.Map(document.getElementById('map'), {
-    center: { lat: -36.8485, lng: 174.7633 }, // Auckland NZ
+    center: {lat:-36.8485, lng:174.7633},
     zoom: 11,
     styles: [
       {elementType:'geometry',stylers:[{color:'#1a1d27'}]},
       {elementType:'labels.text.stroke',stylers:[{color:'#1a1d27'}]},
       {elementType:'labels.text.fill',stylers:[{color:'#8a9bb0'}]},
       {featureType:'road',elementType:'geometry',stylers:[{color:'#2a2d3a'}]},
-      {featureType:'road',elementType:'geometry.stroke',stylers:[{color:'#1a1d27'}]},
       {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#3a3d4a'}]},
       {featureType:'water',elementType:'geometry',stylers:[{color:'#0d1117'}]},
       {featureType:'poi',elementType:'geometry',stylers:[{color:'#1e2130'}]},
       {featureType:'transit',elementType:'geometry',stylers:[{color:'#1e2130'}]},
       {featureType:'administrative',elementType:'geometry.stroke',stylers:[{color:'#2a3040'}]},
     ],
-    disableDefaultUI: false,
-    zoomControl: true,
     mapTypeControl: false,
     streetViewControl: false,
-    fullscreenControl: true,
   });
   mapInfoWindow = new google.maps.InfoWindow();
   updateMapMarkers();
-};
-
-function makeMarkerIcon(color, label) {
-  return {
-    path: google.maps.SymbolPath.CIRCLE,
-    fillColor: color,
-    fillOpacity: 1,
-    strokeColor: '#0d0f14',
-    strokeWeight: 2,
-    scale: 14,
-  };
 }
 
 function updateMapMarkers() {
   if (!mapInstance) return;
+  var onShiftDrivers = allDrivers.filter(function(d) { return liveShifts[d.id] && liveShifts[d.id].onShift === true; });
 
-  const onShiftDrivers = allDrivers.filter(d => liveShifts[d.id]?.onShift === true);
-
-  // Remove markers for drivers no longer on shift
-  Object.keys(mapMarkers).forEach(id => {
-    if (!liveShifts[id]?.onShift) {
+  // Remove old markers
+  Object.keys(mapMarkers).forEach(function(id) {
+    if (!liveShifts[id] || !liveShifts[id].onShift) {
       mapMarkers[id].setMap(null);
       delete mapMarkers[id];
     }
   });
 
-  onShiftDrivers.forEach(driver => {
-    const loc = liveLocations[driver.id];
-    const hasLoc = loc && loc.lat && loc.lng;
-    const color = hasLoc ? '#00e5a0' : '#ff4d6d';
-    const shift = liveShifts[driver.id] || {};
+  onShiftDrivers.forEach(function(driver) {
+    var loc = liveLocations[driver.id];
+    var hasLoc = loc && loc.lat && loc.lng;
+    if (!hasLoc) return;
 
-    if (hasLoc) {
-      const pos = { lat: loc.lat, lng: loc.lng };
+    var pos = {lat: loc.lat, lng: loc.lng};
+    var shift = liveShifts[driver.id] || {};
 
-      if (mapMarkers[driver.id]) {
-        mapMarkers[driver.id].setPosition(pos);
-        mapMarkers[driver.id].setIcon(makeMarkerIcon(color));
-      } else {
-        const marker = new google.maps.Marker({
-          position: pos,
-          map: mapInstance,
-          icon: makeMarkerIcon(color),
-          title: driver.name,
-          label: {
-            text: driver.fleet,
-            color: '#0d0f14',
-            fontSize: '11px',
-            fontWeight: 'bold',
-          },
-          animation: google.maps.Animation.DROP,
-        });
+    if (mapMarkers[driver.id]) {
+      mapMarkers[driver.id].setPosition(pos);
+    } else {
+      var marker = new google.maps.Marker({
+        position: pos,
+        map: mapInstance,
+        icon: {
+          path: google.maps.SymbolPath.CIRCLE,
+          fillColor: '#00e5a0',
+          fillOpacity: 1,
+          strokeColor: '#0d0f14',
+          strokeWeight: 2,
+          scale: 14,
+        },
+        label: {text: driver.fleet, color: '#0d0f14', fontSize: '11px', fontWeight: 'bold'},
+        title: driver.name,
+        animation: google.maps.Animation.DROP,
+      });
 
-        marker.addListener('click', () => {
-          const updated = loc.updatedAt ? new Date(loc.updatedAt).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}) : '—';
-          const clockIn = shift.clockInTime ? new Date(shift.clockInTime).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}) : '—';
-          mapInfoWindow.setContent(`
-            <div style="font-family:'DM Sans',sans-serif;padding:4px;min-width:160px;">
-              <div style="font-size:18px;font-weight:700;margin-bottom:2px;">${driver.name}</div>
-              <div style="font-size:12px;color:#666;margin-bottom:8px;">Fleet #${driver.fleet} · ${driver.yardName}</div>
-              <div style="font-size:12px;color:#00b87a;">● On Shift since ${clockIn}</div>
-              <div style="font-size:11px;color:#999;margin-top:4px;">📍 Updated ${updated}</div>
-              <div style="font-size:10px;color:#bbb;margin-top:2px;">±${Math.round(loc.accuracy||0)}m accuracy</div>
-            </div>
-          `);
-          mapInfoWindow.open(mapInstance, marker);
-        });
+      marker.addListener('click', function() {
+        var updated = loc.updatedAt ? new Date(loc.updatedAt).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}) : '—';
+        var clockIn = shift.clockInTime ? new Date(shift.clockInTime).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}) : '—';
+        mapInfoWindow.setContent(
+          '<div style="font-family:\'DM Sans\',sans-serif;padding:4px;min-width:160px;">' +
+          '<div style="font-size:18px;font-weight:700;margin-bottom:2px;">' + driver.name + '</div>' +
+          '<div style="font-size:12px;color:#666;margin-bottom:8px;">Fleet #' + driver.fleet + ' · ' + driver.yardName + '</div>' +
+          '<div style="font-size:12px;color:#00b87a;">● On Shift since ' + clockIn + '</div>' +
+          '<div style="font-size:11px;color:#999;margin-top:4px;">📍 Updated ' + updated + '</div>' +
+          '<div style="font-size:10px;color:#bbb;margin-top:2px;">±' + Math.round(loc.accuracy||0) + 'm accuracy</div>' +
+          '</div>'
+        );
+        mapInfoWindow.open(mapInstance, marker);
+      });
 
-        mapMarkers[driver.id] = marker;
-      }
+      mapMarkers[driver.id] = marker;
     }
   });
 
-  // Update map stats
-  const onCount  = onShiftDrivers.length;
-  const locCount = onShiftDrivers.filter(d => liveLocations[d.id]?.lat).length;
-  document.getElementById('map-stats').innerHTML = `
-    <div class="map-stat on-s"><div class="dot"></div><span class="n">${onCount}</span> On Shift</div>
-    <div class="map-stat on-s"><div class="dot" style="background:#4af0c0"></div><span class="n">${locCount}</span> Live GPS</div>
-  `;
+  var onCount  = onShiftDrivers.length;
+  var locCount = onShiftDrivers.filter(function(d) { return liveLocations[d.id] && liveLocations[d.id].lat; }).length;
+  document.getElementById('map-stats').innerHTML =
+    '<div class="map-stat on-s"><div class="dot"></div><span class="n">' + onCount + '</span> On Shift</div>' +
+    '<div class="map-stat on-s"><div class="dot" style="background:#4af0c0"></div><span class="n">' + locCount + '</span> Live GPS</div>';
 }
 
 function fitMapToMarkers() {
   if (!mapInstance || Object.keys(mapMarkers).length === 0) return;
-  const bounds = new google.maps.LatLngBounds();
-  Object.values(mapMarkers).forEach(m => bounds.extend(m.getPosition()));
+  var bounds = new google.maps.LatLngBounds();
+  Object.values(mapMarkers).forEach(function(m) { bounds.extend(m.getPosition()); });
   mapInstance.fitBounds(bounds);
   if (Object.keys(mapMarkers).length === 1) mapInstance.setZoom(14);
 }
 
 // ── List render ───────────────────────────────────────────
-function isOn(id) { return liveShifts[id]?.onShift === true; }
-function hasLoc(id) { return !!(liveLocations[id]?.lat); }
+function isOn(id) { return liveShifts[id] && liveShifts[id].onShift === true; }
+function hasLoc(id) { return !!(liveLocations[id] && liveLocations[id].lat); }
 function formatTime(ts) { return ts ? new Date(ts).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'}) : null; }
-function getYardCounts(y) { const on=y.drivers.filter(d=>isOn(d.id)).length; return{on,off:y.drivers.length-on}; }
+function getYardCounts(y) { var on=y.drivers.filter(function(d){return isOn(d.id);}).length; return{on:on,off:y.drivers.length-on}; }
 
 function render() {
-  const yard = yards.find(y=>y.id===activeYardId);
-  const q = searchQuery.toLowerCase();
-  const filtered = yard.drivers.filter(d=>d.name.toLowerCase().includes(q)||d.fleet.includes(q));
-  const onD=filtered.filter(d=>isOn(d.id)), offD=filtered.filter(d=>!isOn(d.id));
-  const {on,off}=getYardCounts(yard);
+  var yard = yards.find(function(y){return y.id===activeYardId;});
+  var q = searchQuery.toLowerCase();
+  var filtered = yard.drivers.filter(function(d){return d.name.toLowerCase().indexOf(q)>-1||d.fleet.indexOf(q)>-1;});
+  var onD=filtered.filter(function(d){return isOn(d.id);}),offD=filtered.filter(function(d){return !isOn(d.id);});
+  var counts=getYardCounts(yard);
 
-  document.getElementById('onCount').textContent=on;
-  document.getElementById('offCount').textContent=off;
+  document.getElementById('onCount').textContent=counts.on;
+  document.getElementById('offCount').textContent=counts.off;
   document.getElementById('totalCount').textContent=yard.drivers.length;
 
-  document.getElementById('yardSelector').innerHTML=yards.map(y=>{
-    const{on,off}=getYardCounts(y);
-    return`<button class="yard-btn ${y.id===activeYardId?'active':''}" onclick="setYard('${y.id}')">
-      <div class="yn">${y.name}</div>
-      <div class="yc">${y.code} · ${y.drivers.length} drivers</div>
-      <div class="ym"><span class="on-n">${on} on</span><span>·</span><span class="off-n">${off} off</span></div>
-    </button>`;
+  document.getElementById('yardSelector').innerHTML=yards.map(function(y){
+    var c=getYardCounts(y);
+    return '<button class="yard-btn '+(y.id===activeYardId?'active':'')+'" onclick="setYard(\''+y.id+'\')">'+
+      '<div class="yn">'+y.name+'</div>'+
+      '<div class="yc">'+y.code+' · '+y.drivers.length+' drivers</div>'+
+      '<div class="ym"><span class="on-n">'+c.on+' on</span><span>·</span><span class="off-n">'+c.off+' off</span></div>'+
+      '</button>';
   }).join('');
 
   renderGrid('onGrid', onD);
@@ -408,46 +480,42 @@ function render() {
 }
 
 function renderGrid(id, drivers) {
-  document.getElementById(id).innerHTML = drivers.map((d,i)=>{
-    const on=isOn(d.id), ct=liveShifts[d.id]?.clockInTime, loc=hasLoc(d.id);
-    return`<div class="driver-card ${on?'on-shift':'off-shift'}" style="animation-delay:${i*.04}s" onclick="${on&&loc?`focusDriver('${d.id}')`:''}" title="${on&&loc?'Click to see on map':''}">
-      <div class="card-top">
-        <div><div class="fleet-num">${d.fleet}</div><div class="fleet-lbl">FLEET #</div></div>
-        <div class="status-badge"><div class="blink"></div>${on?'On Shift':'Off Shift'}</div>
-      </div>
-      <div class="driver-name">${d.name}</div>
-      ${on&&ct?`<div class="clock-time">Since <span>${formatTime(ct)}</span></div>`:''}
-      ${on&&loc?`<div class="has-location">📍 Live location</div>`:''}
-    </div>`;
+  document.getElementById(id).innerHTML = drivers.map(function(d,i){
+    var on=isOn(d.id), ct=liveShifts[d.id]&&liveShifts[d.id].clockInTime, loc=hasLoc(d.id);
+    return '<div class="driver-card '+(on?'on-shift':'off-shift')+'" style="animation-delay:'+(i*.04)+'s"'+
+      (on&&loc?' onclick="focusDriver(\''+d.id+'\')" title="Click to see on map"':'')+'>'+
+      '<div class="card-top">'+
+        '<div><div class="fleet-num">'+d.fleet+'</div><div class="fleet-lbl">FLEET #</div></div>'+
+        '<div class="status-badge"><div class="blink"></div>'+(on?'On Shift':'Off Shift')+'</div>'+
+      '</div>'+
+      '<div class="driver-name">'+d.name+'</div>'+
+      (on&&ct?'<div class="clock-time">Since <span>'+formatTime(ct)+'</span></div>':'')+
+      (on&&loc?'<div class="has-location">📍 Live location</div>':'')+
+      '</div>';
   }).join('');
 }
 
-window.focusDriver = (driverId) => {
-  const loc = liveLocations[driverId];
+function focusDriver(driverId) {
+  var loc = liveLocations[driverId];
   if (!loc || !mapInstance) return;
   switchTab('map');
-  setTimeout(() => {
+  setTimeout(function() {
     mapInstance.setCenter({lat:loc.lat, lng:loc.lng});
     mapInstance.setZoom(15);
-    if (mapMarkers[driverId]) {
-      google.maps.event.trigger(mapMarkers[driverId], 'click');
-    }
+    if (mapMarkers[driverId]) google.maps.event.trigger(mapMarkers[driverId], 'click');
   }, 150);
-};
+}
 
-window.setYard=(id)=>{activeYardId=id;searchQuery='';document.getElementById('searchInput').value='';render();};
-document.getElementById('searchInput').addEventListener('input',e=>{searchQuery=e.target.value.trim();render();});
+function setYard(id) { activeYardId=id; searchQuery=''; document.getElementById('searchInput').value=''; render(); }
+document.getElementById('searchInput').addEventListener('input', function(e){ searchQuery=e.target.value.trim(); render(); });
 
-function tick(){
-  const now=new Date();
+// ── Clock ─────────────────────────────────────────────────
+function tick() {
+  var now=new Date();
   document.getElementById('clockTime').textContent=now.toLocaleTimeString('en-NZ',{hour12:false});
   document.getElementById('dateStr').textContent=now.toLocaleDateString('en-NZ',{weekday:'short',day:'numeric',month:'short',year:'numeric'}).toUpperCase();
 }
 tick(); setInterval(tick,1000);
-render();
-
-// expose for map callback
-window._firebaseReady = true;
 </script>
 </body>
 </html>
