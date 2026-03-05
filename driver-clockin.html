@@ -160,6 +160,8 @@ select.field-input option{background:#13161e;}
 .return-btn-text{font-family:'DM Mono',monospace;font-size:15px;font-weight:700;letter-spacing:2px;color:var(--yellow);}
 .return-btn-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--yellow);opacity:.6;margin-top:2px;}
 
+#screen-map{min-height:100vh;}
+#driver-map{height:calc(100vh - 187px) !important;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes spin{to{transform:rotate(360deg)}}
 </style>
@@ -267,10 +269,31 @@ select.field-input option{background:#13161e;}
   </div>
 </div>
 
+<!-- MAP SCREEN -->
+<div class="screen" id="screen-map">
+  <div class="nav">
+    <button class="nav-back" onclick="goTo('clock')">← Back</button>
+    <span class="nav-title" id="map-nav-title">Directions</span>
+    <div style="width:50px"></div>
+  </div>
+  <div style="flex:1;position:relative;">
+    <div id="driver-map" style="width:100%;height:100%;"></div>
+    <!-- Bottom action bar -->
+    <div style="position:absolute;bottom:0;left:0;right:0;background:rgba(13,15,20,0.95);border-top:1px solid var(--border);padding:16px 20px;backdrop-filter:blur(8px);">
+      <div style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;margin-bottom:6px;">Delivering to</div>
+      <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:12px;" id="map-address-label">—</div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="confirmArrived()" style="flex:1;background:var(--on-dim);border:2px solid var(--on);border-radius:12px;padding:14px;font-family:'DM Mono',monospace;font-size:14px;font-weight:700;letter-spacing:2px;color:var(--on);cursor:pointer;">📍 ARRIVED ON SITE</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBt_8TZ4cBONkK_OSJurYnBCJSm2Zpi8uc&callback=initDriverMap" async defer></script>
 <script>
 firebase.initializeApp({
   apiKey:"AIzaSyCzvWNFjDlt-tjaAigMVZ9BicWCUa0guG0",
@@ -501,7 +524,7 @@ function buildJobCard(job){
   } else if(st==='loaded'){
     html+=actionBtn('green','🔍','PRE-TRIP CHECKS DONE','Tap when checks complete','handleJobAction(\'prechecks\')');
   } else if(st==='prechecks'){
-    html+=actionBtn('green','🚛','IN TRANSIT','Opens Google Maps for directions','handleTransit()');
+    html+=actionBtn('green','🚛','IN TRANSIT','Opens map with directions','handleTransit()');
   } else if(st==='transit'){
     html+=actionBtn('green','📍','ARRIVED ON SITE','Tap when you arrive','handleJobAction(\'arrived\')');
   } else if(st==='arrived'){
@@ -511,7 +534,7 @@ function buildJobCard(job){
     html+=actionBtn('yellow','🔄','RETURN CONCRETE','Has leftover concrete','goTo(\'return\')');
     html+=actionBtn('red','⚠️','REPORT ISSUE','Something went wrong','goTo(\'issue\')');
   } else if(st==='return'){
-    // just show bowl timer, no extra actions needed
+    html+=actionBtn('green','🏠','ARRIVED AT YARD','Tap when back at yard — completes job','handleArrivedAtYard()');
   }
   html+='</div></div>';
   return html;
@@ -554,12 +577,102 @@ function handleJobAction(newStatus){
 
 function handleTransit(){
   handleJobAction('transit');
-  // Open Google Maps with directions to delivery address
-  setTimeout(function(){
-    var addr=encodeURIComponent(currentJob.address+', Auckland, New Zealand');
-    var url='https://www.google.com/maps/dir/?api=1&destination='+addr+'&travelmode=driving';
-    window.open(url,'_blank');
-  },500);
+  setTimeout(function(){ openMapScreen(); }, 400);
+}
+
+function openMapScreen(){
+  if(!currentJob)return;
+  document.getElementById('map-address-label').textContent = currentJob.address;
+  document.getElementById('map-nav-title').textContent = 'Directions to Site';
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  document.getElementById('screen-map').classList.add('active');
+  // Init map if ready, else wait for callback
+  if(window.driverMapReady) renderDriverMap();
+}
+
+function confirmArrived(){
+  handleJobAction('arrived');
+  goTo('clock');
+  showToast('✓ Arrived on site!');
+}
+
+function handleArrivedAtYard(){
+  if(!confirm('Confirm you have arrived back at yard? This will complete the job.'))return;
+  db.ref('jobs/'+activeDriver.id).update({
+    status:'done',
+    arrivedYardTime:Date.now(),
+    completedTime:Date.now()
+  });
+  showToast('✓ Job complete — arrived at yard!');
+}
+
+var driverMapInstance=null;
+function initDriverMap(){
+  window.driverMapReady=true;
+  if(document.getElementById('screen-map').classList.contains('active')) renderDriverMap();
+}
+
+function renderDriverMap(){
+  var mapDiv=document.getElementById('driver-map');
+  if(!mapDiv||!window.google)return;
+  if(!driverMapInstance){
+    driverMapInstance=new google.maps.Map(mapDiv,{
+      zoom:13,
+      center:lastLoc?{lat:lastLoc.lat,lng:lastLoc.lng}:{lat:-36.85,lng:174.77},
+      mapTypeControl:false,streetViewControl:false,fullscreenControl:false,
+      styles:[
+        {elementType:'geometry',stylers:[{color:'#1a1d27'}]},
+        {elementType:'labels.text.stroke',stylers:[{color:'#1a1d27'}]},
+        {elementType:'labels.text.fill',stylers:[{color:'#8a9bb0'}]},
+        {featureType:'road',elementType:'geometry',stylers:[{color:'#2a2d3a'}]},
+        {featureType:'road.highway',elementType:'geometry',stylers:[{color:'#3a3d4a'}]},
+        {featureType:'water',elementType:'geometry',stylers:[{color:'#0d1117'}]},
+        {featureType:'poi',elementType:'geometry',stylers:[{color:'#1e2130'}]},
+      ]
+    });
+  }
+  if(!currentJob||!currentJob.address)return;
+  var geocoder=new google.maps.Geocoder();
+  geocoder.geocode({address:currentJob.address+', Auckland, New Zealand'},function(results,status){
+    if(status==='OK'&&results[0]){
+      var destLatLng=results[0].geometry.location;
+      // Clear old markers
+      if(driverMapInstance._destMarker) driverMapInstance._destMarker.setMap(null);
+      if(driverMapInstance._myMarker)   driverMapInstance._myMarker.setMap(null);
+      if(driverMapInstance._renderer)   driverMapInstance._renderer.setMap(null);
+      // Destination pin
+      driverMapInstance._destMarker=new google.maps.Marker({
+        position:destLatLng,map:driverMapInstance,title:'Delivery site',
+        icon:{path:google.maps.SymbolPath.BACKWARD_CLOSED_ARROW,fillColor:'#f5c842',fillOpacity:1,strokeColor:'#0d0f14',strokeWeight:2,scale:10},
+      });
+      // My position
+      if(lastLoc){
+        driverMapInstance._myMarker=new google.maps.Marker({
+          position:{lat:lastLoc.lat,lng:lastLoc.lng},map:driverMapInstance,title:'You',
+          icon:{path:google.maps.SymbolPath.CIRCLE,fillColor:'#00e5a0',fillOpacity:1,strokeColor:'#0d0f14',strokeWeight:2,scale:10},
+          label:{text:'ME',color:'#0d0f14',fontSize:'8px',fontWeight:'bold'}
+        });
+        // Draw route
+        var directionsService=new google.maps.DirectionsService();
+        var renderer=new google.maps.DirectionsRenderer({suppressMarkers:true,polylineOptions:{strokeColor:'#00e5a0',strokeWeight:4,strokeOpacity:0.8}});
+        renderer.setMap(driverMapInstance);
+        driverMapInstance._renderer=renderer;
+        directionsService.route({
+          origin:{lat:lastLoc.lat,lng:lastLoc.lng},
+          destination:destLatLng,
+          travelMode:google.maps.TravelMode.DRIVING
+        },function(result,status){
+          if(status==='OK'){
+            renderer.setDirections(result);
+            var leg=result.routes[0].legs[0];
+            document.getElementById('map-nav-title').textContent=leg.duration.text+' away · '+leg.distance.text;
+          }
+        });
+      } else {
+        driverMapInstance.setCenter(destLatLng);
+      }
+    }
+  });
 }
 
 // Return form
