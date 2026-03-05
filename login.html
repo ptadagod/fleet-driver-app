@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fleet Ops — Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0d0f14;--surface:#13161e;--border:#1e2330;--on:#00e5a0;--off:#ff4d6d;--text:#e8eaf0;--muted:#5a6080;--yellow:#f5c842;}
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;padding:24px;}
+.box{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:36px 32px;max-width:420px;width:100%;}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:42px;line-height:.9;margin-bottom:4px;}
+.logo span{color:var(--on);}
+.logo-sub{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-bottom:24px;}
+.divider{height:1px;background:var(--border);margin-bottom:22px;}
+.mode-toggle{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:4px;margin-bottom:20px;}
+.mode-btn{flex:1;padding:10px;font-family:'DM Mono',monospace;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-radius:8px;cursor:pointer;transition:all .15s;}
+.mode-btn.active{background:var(--surface);color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.3);}
+.msg{font-family:'DM Mono',monospace;font-size:12px;padding:10px 14px;border-radius:10px;margin-bottom:14px;display:none;line-height:1.6;}
+.msg.error{color:var(--off);background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.2);}
+.msg.warn{color:var(--yellow);background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.2);}
+.field{margin-bottom:12px;}
+.field-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:block;}
+.field input{width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;padding:13px 14px;border-radius:12px;outline:none;transition:border-color .15s;}
+.field input:focus{border-color:var(--on);}
+.field input::placeholder{color:var(--muted);}
+.role-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:block;}
+.role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;}
+.role-card{background:var(--bg);border:2px solid var(--border);border-radius:14px;padding:14px 8px;text-align:center;cursor:pointer;transition:all .15s;}
+.role-card .ri{font-size:26px;margin-bottom:5px;}
+.role-card .rn{font-family:'DM Mono',monospace;font-size:10px;color:var(--muted);}
+.role-card.sel-driver{border-color:var(--on);background:rgba(0,229,160,.07);}
+.role-card.sel-driver .rn{color:var(--on);}
+.role-card.sel-dispatcher{border-color:var(--yellow);background:rgba(245,200,66,.07);}
+.role-card.sel-dispatcher .rn{color:var(--yellow);}
+.role-card.sel-collections{border-color:#a78bfa;background:rgba(167,139,250,.07);}
+.role-card.sel-collections .rn{color:#a78bfa;}
+.submit-btn{width:100%;background:var(--on);color:#0d0f14;border:none;border-radius:12px;padding:15px;font-family:'DM Mono',monospace;font-size:14px;font-weight:700;letter-spacing:2px;cursor:pointer;margin-top:4px;}
+.submit-btn:disabled{opacity:.45;cursor:not-allowed;}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(13,15,20,.3);border-top-color:#0d0f14;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+#pending-screen{display:none;text-align:center;padding:8px 0;}
+.pending-icon{font-size:48px;margin-bottom:12px;}
+.pending-title{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--yellow);margin-bottom:8px;}
+.pending-text{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);line-height:1.9;margin-bottom:18px;}
+.back-btn{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted);background:none;border:1px solid var(--border);border-radius:100px;padding:9px 20px;cursor:pointer;}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="logo">Fleet<br><span>Ops</span></div>
+  <div class="logo-sub">Operations Portal</div>
+  <div class="divider"></div>
+
+  <div id="pending-screen">
+    <div class="pending-icon">⏳</div>
+    <div class="pending-title">Pending Approval</div>
+    <div class="pending-text">Your collections account has been created.<br>An admin will approve your access shortly.<br>You'll be able to sign in once approved.</div>
+    <button class="back-btn" onclick="showMode('login')">← Back to Sign In</button>
+  </div>
+
+  <div id="auth-form">
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="btn-login" onclick="showMode('login')">Sign In</button>
+      <button class="mode-btn" id="btn-signup" onclick="showMode('signup')">Sign Up</button>
+    </div>
+
+    <div class="msg" id="msg"></div>
+
+    <div id="signup-only" style="display:none;">
+      <div class="field">
+        <label class="field-label">Full Name</label>
+        <input type="text" id="fullname" placeholder="Your full name" autocomplete="name">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Email</label>
+      <input type="email" id="email" placeholder="your@email.com" autocomplete="email">
+    </div>
+    <div class="field">
+      <label class="field-label">Password</label>
+      <input type="password" id="password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')go()">
+    </div>
+
+    <div id="role-section" style="display:none;">
+      <label class="role-label">Your Role</label>
+      <div class="role-grid">
+        <div class="role-card" id="rc-driver" onclick="selectRole('driver')">
+          <div class="ri">🚛</div><div class="rn">Driver</div>
+        </div>
+        <div class="role-card" id="rc-dispatcher" onclick="selectRole('dispatcher')">
+          <div class="ri">⚡</div><div class="rn">Dispatcher</div>
+        </div>
+        <div class="role-card" id="rc-collections" onclick="selectRole('collections')">
+          <div class="ri">🧪</div><div class="rn">Collections</div>
+        </div>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submit-btn" onclick="go()">SIGN IN</button>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script>
+window.addEventListener('DOMContentLoaded',function(){
+  if(typeof firebase === 'undefined'){
+    document.body.innerHTML='<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0d0f14;color:#ff4d6d;font-family:monospace;font-size:14px;text-align:center;padding:20px;">Firebase failed to load.<br>Check your internet connection and reload.</div>';
+    return;
+  }
+
+firebase.initializeApp({
+  apiKey:"AIzaSyCzvWNFjDlt-tjaAigMVZ9BicWCUa0guG0",
+  authDomain:"fleetshifttracker.firebaseapp.com",
+  databaseURL:"https://fleetshifttracker-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:"fleetshifttracker",
+  storageBucket:"fleetshifttracker.firebasestorage.app",
+  messagingSenderId:"276983000908",
+  appId:"1:276983000908:web:7948d3ccab92359795e9e9"
+});
+var auth=firebase.auth(), db=firebase.database();
+var mode='login', selectedRole=null;
+
+// Bootstrap default admin account on first load
+var ADMIN_EMAIL='admin@fleetops.local';
+var ADMIN_PASS='J0rd@n2795';
+function bootstrapAdmin(){
+  db.ref('admin_bootstrapped').once('value').then(function(snap){
+    if(snap.val()) return; // already done
+    auth.createUserWithEmailAndPassword(ADMIN_EMAIL, ADMIN_PASS).then(function(cred){
+      return db.ref('users/'+cred.user.uid).set({
+        name:'Admin',email:ADMIN_EMAIL,role:'admin',
+        approved:true,createdAt:Date.now()
+      }).then(function(){
+        return db.ref('admin_bootstrapped').set(true);
+      }).then(function(){
+        auth.signOut();
+      });
+    }).catch(function(err){
+      // auth/email-already-in-use = already created, mark done
+      if(err.code==='auth/email-already-in-use'){
+        db.ref('admin_bootstrapped').set(true);
+      }
+    });
+  });
+}
+bootstrapAdmin();
+
+var ERRS={
+  'auth/user-not-found':'No account found with this email.',
+  'auth/wrong-password':'Incorrect password.',
+  'auth/invalid-credential':'Email or password is incorrect.',
+  'auth/email-already-in-use':'This email is already registered.',
+  'auth/weak-password':'Password must be at least 6 characters.',
+  'auth/invalid-email':'Please enter a valid email address.',
+  'auth/too-many-requests':'Too many attempts. Try again later.',
+  'auth/operation-not-allowed':'Email sign-in is not enabled. Enable it in Firebase Console → Authentication → Sign-in method → Email/Password.',
+};
+
+// Already logged in — redirect straight away
+auth.onAuthStateChanged(function(user){
+  if(!user) return;
+  db.ref('users/'+user.uid).once('value').then(function(snap){
+    var u=snap.val(); if(!u) return;
+    goTo(u);
+  });
+});
+
+function goTo(u){
+  if(u.role==='admin'||u.role==='dispatcher') window.location.href='shift-tracker-live.html';
+  else if(u.role==='collections') window.location.href='collections.html';
+  else window.location.href='driver-clockin.html';
+}
+
+function showMode(m){
+  mode=m;
+  document.getElementById('btn-login').classList.toggle('active',m==='login');
+  document.getElementById('btn-signup').classList.toggle('active',m==='signup');
+  document.getElementById('signup-only').style.display=m==='signup'?'block':'none';
+  document.getElementById('role-section').style.display=m==='signup'?'block':'none';
+  document.getElementById('submit-btn').textContent=m==='login'?'SIGN IN':'CREATE ACCOUNT';
+  document.getElementById('pending-screen').style.display='none';
+  document.getElementById('auth-form').style.display='block';
+  document.getElementById('msg').style.display='none';
+  selectedRole=null;
+  document.querySelectorAll('.role-card').forEach(function(c){c.className='role-card';});
+}
+
+function selectRole(r){
+  selectedRole=r;
+  document.querySelectorAll('.role-card').forEach(function(c){c.className='role-card';});
+  document.getElementById('rc-'+r).classList.add('sel-'+r);
+}
+
+function showMsg(type,text){var el=document.getElementById('msg');el.className='msg '+type;el.textContent=text;el.style.display='block';}
+function busy(on,label){var b=document.getElementById('submit-btn');b.disabled=on;b.innerHTML=on?'<span class="spinner"></span>'+(label||''):(mode==='login'?'SIGN IN':'CREATE ACCOUNT');}
+
+function go(){
+  document.getElementById('msg').style.display='none';
+  var email=document.getElementById('email').value.trim();
+  var pass=document.getElementById('password').value;
+  if(!email||!pass){showMsg('error','Please enter your email and password.');return;}
+  if(mode==='login') doLogin(email,pass);
+  else doSignup(email,pass);
+}
+
+function doLogin(email,pass){
+  busy(true,'Signing in…');
+  auth.signInWithEmailAndPassword(email,pass).then(function(cred){
+    return db.ref('users/'+cred.user.uid).once('value');
+  }).then(function(snap){
+    var u=snap.val();
+    if(!u){auth.signOut();busy(false);showMsg('error','Account not found.');return;}
+    if(u.role==='collections'&&!u.approved){
+      auth.signOut();busy(false);
+      showMsg('warn','Your account is pending admin approval. Check back soon.');
+      return;
+    }
+    goTo(u);
+  }).catch(function(err){busy(false);showMsg('error',ERRS[err.code]||err.message);});
+}
+
+function doSignup(email,pass){
+  var name=document.getElementById('fullname').value.trim();
+  if(!name){showMsg('error','Please enter your full name.');return;}
+  if(!selectedRole){showMsg('error','Please select your role.');return;}
+  if(pass.length<6){showMsg('error','Password must be at least 6 characters.');return;}
+  busy(true,'Creating account…');
+  auth.createUserWithEmailAndPassword(email,pass).then(function(cred){
+    var approved=selectedRole!=='collections';
+    return db.ref('users/'+cred.user.uid).set({
+      name:name,email:email,role:selectedRole,
+      approved:approved,createdAt:Date.now()
+    }).then(function(){
+      if(selectedRole==='collections'){
+        auth.signOut();busy(false);
+        document.getElementById('auth-form').style.display='none';
+        document.getElementById('pending-screen').style.display='block';
+      } else {
+        goTo({role:selectedRole});
+      }
+    });
+  }).catch(function(err){busy(false);showMsg('error',ERRS[err.code]||err.message);});
+}
+});
+</script>
+</body>
+</html>
