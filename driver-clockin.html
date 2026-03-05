@@ -40,6 +40,22 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM San
 .driver-name{font-size:16px;font-weight:600;color:var(--text);}
 .driver-arrow{color:var(--muted);font-size:16px;}
 
+/* PIN screen */
+.pin-body{flex:1;display:flex;flex-direction:column;align-items:center;padding:32px 24px;}
+.pin-driver-name{font-family:'Bebas Neue',sans-serif;font-size:42px;color:var(--text);margin-bottom:4px;text-align:center;}
+.pin-fleet{font-family:'DM Mono',monospace;font-size:13px;color:var(--on);letter-spacing:.2em;margin-bottom:28px;text-align:center;}
+.pin-label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+.pin-dots{display:flex;gap:14px;margin-bottom:28px;}
+.pin-dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--border);background:transparent;transition:all .15s;}
+.pin-dot.filled{background:var(--on);border-color:var(--on);box-shadow:0 0 10px var(--on);}
+.pin-dot.error{background:var(--off);border-color:var(--off);box-shadow:0 0 10px var(--off);}
+.pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:100%;max-width:280px;}
+.pin-key{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--text);text-align:center;cursor:pointer;user-select:none;transition:all .1s;}
+.pin-key:active{transform:scale(0.94);background:var(--on-dim);border-color:var(--on);}
+.pin-key.del{font-family:'DM Mono',monospace;font-size:18px;color:var(--muted);}
+.pin-key.empty{background:transparent;border-color:transparent;cursor:default;}
+.pin-error{font-family:'DM Mono',monospace;font-size:12px;color:var(--off);margin-bottom:12px;min-height:18px;text-align:center;}
+
 /* Clock screen */
 .clock-body{flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 20px 36px;}
 .info-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:22px;width:100%;text-align:center;margin-bottom:14px;}
@@ -197,6 +213,41 @@ select.field-input option{background:#13161e;}
   </div>
 </div>
 
+<!-- PIN SCREEN -->
+<div class="screen" id="screen-pin">
+  <div class="nav">
+    <button class="nav-back" onclick="goTo('driver')">← Back</button>
+    <span class="nav-title">Enter PIN</span>
+    <div style="width:50px"></div>
+  </div>
+  <div class="pin-body">
+    <div class="pin-driver-name" id="pin-driver-name">Driver</div>
+    <div class="pin-fleet" id="pin-fleet-label">Fleet #000</div>
+    <div class="pin-label">Enter your 4-digit PIN</div>
+    <div class="pin-dots" id="pin-dots">
+      <div class="pin-dot" id="pd0"></div>
+      <div class="pin-dot" id="pd1"></div>
+      <div class="pin-dot" id="pd2"></div>
+      <div class="pin-dot" id="pd3"></div>
+    </div>
+    <div class="pin-error" id="pin-error"></div>
+    <div class="pin-pad">
+      <div class="pin-key" onclick="pinKey('1')">1</div>
+      <div class="pin-key" onclick="pinKey('2')">2</div>
+      <div class="pin-key" onclick="pinKey('3')">3</div>
+      <div class="pin-key" onclick="pinKey('4')">4</div>
+      <div class="pin-key" onclick="pinKey('5')">5</div>
+      <div class="pin-key" onclick="pinKey('6')">6</div>
+      <div class="pin-key" onclick="pinKey('7')">7</div>
+      <div class="pin-key" onclick="pinKey('8')">8</div>
+      <div class="pin-key" onclick="pinKey('9')">9</div>
+      <div class="pin-key empty"></div>
+      <div class="pin-key" onclick="pinKey('0')">0</div>
+      <div class="pin-key del" onclick="pinDelete()">⌫</div>
+    </div>
+  </div>
+</div>
+
 <!-- CLOCK/JOB SCREEN -->
 <div class="screen" id="screen-clock">
   <div class="nav">
@@ -292,7 +343,6 @@ select.field-input option{background:#13161e;}
 <div class="toast" id="toast"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBt_8TZ4cBONkK_OSJurYnBCJSm2Zpi8uc&callback=initDriverMap" async defer></script>
 <script>
@@ -305,16 +355,10 @@ firebase.initializeApp({
   messagingSenderId:"276983000908",
   appId:"1:276983000908:web:7948d3ccab92359795e9e9"
 });
-var auth=firebase.auth(),db=firebase.database();
+var db=firebase.database();
 
 // Auth gate — must be logged in as driver
-auth.onAuthStateChanged(function(user){
-  if(!user){window.location.href='login.html';return;}
-  db.ref('users/'+user.uid).once('value').then(function(snap){
-    var u=snap.val();
-    if(!u||u.role!=='driver'){auth.signOut();window.location.href='login.html';}
-  });
-});
+// No Firebase Auth for drivers — PIN based
 
 var YARDS = [
   {id:'east-tamaki',name:'East Tamaki',code:'CE',address:'20 Jarvis Way, Ōtara, Auckland 2019',drivers:[
@@ -355,6 +399,7 @@ var saved=JSON.parse(localStorage.getItem('fst_session')||'null');
 if(saved){
   var sy=YARDS.find(function(y){return y.id===saved.yardId;});
   var sd=sy&&sy.drivers.find(function(d){return d.id===saved.driverId;});
+  // Session restore skips PIN — driver already verified this session
   if(sy&&sd){activeYard=sy;activeDriver=sd;goTo('clock');}
 }
 
@@ -370,7 +415,7 @@ function goTo(screen){
   if(screen==='yard'||screen==='driver')stopLocation();
 }
 
-function logout(){stopLocation();localStorage.removeItem('fst_session');auth.signOut();window.location.href='login.html';}
+function logout(){stopLocation();localStorage.removeItem('fst_session');activeYard=null;activeDriver=null;goTo('yard');}
 
 // Yard screen
 function renderYards(){
@@ -401,8 +446,52 @@ function renderDrivers(filter){
 function filterDrivers(){renderDrivers(document.getElementById('driver-search').value);}
 function selectDriver(id){
   activeDriver=activeYard.drivers.find(function(d){return d.id===id;});
-  localStorage.setItem('fst_session',JSON.stringify({yardId:activeYard.id,driverId:activeDriver.id}));
-  goTo('clock');
+  showPinScreen();
+}
+
+// ── PIN ──────────────────────────────────────────────────────────────────
+var pinEntry='';
+function showPinScreen(){
+  pinEntry='';
+  document.getElementById('pin-driver-name').textContent=activeDriver.name;
+  document.getElementById('pin-fleet-label').textContent='Fleet #'+activeDriver.fleet;
+  document.getElementById('pin-error').textContent='';
+  updatePinDots();
+  goTo('pin');
+}
+function updatePinDots(){
+  for(var i=0;i<4;i++){
+    var dot=document.getElementById('pd'+i);
+    dot.className='pin-dot'+(i<pinEntry.length?' filled':'');
+  }
+}
+function pinKey(k){
+  if(pinEntry.length>=4)return;
+  pinEntry+=k;
+  updatePinDots();
+  document.getElementById('pin-error').textContent='';
+  if(pinEntry.length===4)checkPin();
+}
+function pinDelete(){
+  pinEntry=pinEntry.slice(0,-1);
+  updatePinDots();
+  document.getElementById('pin-error').textContent='';
+}
+function checkPin(){
+  var correct=activeDriver.fleet+'1';
+  if(pinEntry===correct){
+    // PIN correct — save session and go to clock
+    localStorage.setItem('fst_session',JSON.stringify({yardId:activeYard.id,driverId:activeDriver.id}));
+    goTo('clock');
+  } else {
+    // Wrong PIN — shake dots red, clear after delay
+    for(var i=0;i<4;i++) document.getElementById('pd'+i).className='pin-dot error';
+    document.getElementById('pin-error').textContent='Incorrect PIN. Try again.';
+    setTimeout(function(){
+      pinEntry='';
+      updatePinDots();
+    },900);
+  }
 }
 
 // Clock screen
