@@ -369,7 +369,26 @@ auth.onAuthStateChanged(function(user){
     document.getElementById('app').style.display='none';
   }
 });
-function signInWithGoogle(){document.getElementById('login-error').style.display='none';auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(function(){document.getElementById('login-error').style.display='block';});}
+function signInWithGoogle(){
+  document.getElementById('login-error').style.display='none';
+  var provider=new firebase.auth.GoogleAuthProvider();
+  // Try popup first; if it fails (blocked on GitHub Pages), fall back to redirect
+  auth.signInWithPopup(provider).catch(function(err){
+    if(err.code==='auth/popup-blocked'||err.code==='auth/popup-closed-by-user'||err.code==='auth/cancelled-popup-request'){
+      auth.signInWithRedirect(provider);
+    } else {
+      document.getElementById('login-error').style.display='block';
+      document.getElementById('login-error').textContent='Sign in failed: '+err.message;
+    }
+  });
+}
+// Handle redirect result on page load
+auth.getRedirectResult().catch(function(err){
+  if(err&&err.code){
+    document.getElementById('login-error').style.display='block';
+    document.getElementById('login-error').textContent='Sign in failed: '+err.message;
+  }
+});
 function signOut(){auth.signOut();}
 
 // DB
