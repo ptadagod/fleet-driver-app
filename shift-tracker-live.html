@@ -649,7 +649,7 @@ var dbStarted=false,notifTimer=null,bowlTimers={};
 var activeDispatcher=null; // {name} of logged-in dispatcher
 var dispPinEntry='',dispPinSelected=null;
 // Collections state
-var collActiveSession=null,collMoulds={};
+var collActiveSession=null,collMoulds={},collMouldHistory={};
 var collSelectedReturnKey=null,collSelectedReturnData=null;
 // Dispatch state
 var selectedDriverId=null,selectedDriverName=null,selectedDriverFleet=null;
@@ -745,6 +745,11 @@ function startDb(){
     var mb=document.getElementById('moulds-badge');
     var mc=Object.keys(collMoulds).length;
     if(mc>0){mb.textContent=mc;mb.classList.add('show');}else{mb.classList.remove('show');}
+  });
+  // Mould totals — cumulative poured per mould across all sessions
+  db.ref('mould_totals').on('value',function(s){
+    collMouldHistory=s.val()||{};
+    renderMoulds();
   });
 }
 
@@ -1290,7 +1295,7 @@ function renderMoulds(){
   var volRet=collActiveSession.volumeReturned||0;
   var diff=volRet-totalPoured;
   var infoEl=document.createElement('div');
-  infoEl.style.cssText='background:var(--purple-dim);border:1px solid rgba(167,139,250,.3);border-radius:14px;padding:16px 18px;margin-bottom:4px;';
+  infoEl.style.cssText='background:var(--purple-dim);border:1px solid rgba(167,139,250,.3);border-radius:14px;padding:16px 18px;margin-bottom:16px;';
   infoEl.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;"><div><div style="font-family:monospace;font-size:10px;color:var(--purple);letter-spacing:.15em;text-transform:uppercase;margin-bottom:4px;">Active Session</div><div style="font-size:16px;font-weight:700;">'+collActiveSession.driverName+' · Fleet '+collActiveSession.fleet+'</div><div style="font-family:monospace;font-size:11px;color:var(--muted);">Docket '+collActiveSession.docket+' · '+collActiveSession.mpa+'MPa</div></div><div style="text-align:right;"><div style="font-family:monospace;font-size:10px;color:var(--muted);">Returned</div><div style="font-family:monospace;font-size:22px;font-weight:700;color:var(--yellow);">'+volRet.toFixed(2)+'m³</div><div style="font-family:monospace;font-size:11px;color:'+(Math.abs(diff)<0.05?'var(--on)':'var(--yellow)')+'">Poured: '+totalPoured.toFixed(2)+'m³ · Left: '+Math.max(0,diff).toFixed(2)+'m³</div></div></div>';
   var finBtn=document.createElement('button');
   finBtn.style.cssText='font-family:monospace;font-size:12px;font-weight:700;background:var(--on-dim);border:1px solid rgba(0,229,160,.4);color:var(--on);border-radius:100px;padding:8px 18px;cursor:pointer;';
@@ -1299,58 +1304,144 @@ function renderMoulds(){
   infoEl.appendChild(finBtn);
   sessionInfo.innerHTML='';sessionInfo.appendChild(infoEl);
 
-  var mouldEntries=Object.entries(collMoulds);
+  // Sort newest first by addedAt timestamp
+  var mouldEntries=Object.entries(collMoulds).sort(function(a,b){
+    return (b[1].addedAt||0)-(a[1].addedAt||0);
+  });
+
   if(mouldEntries.length===0){
-    document.getElementById('moulds-list').innerHTML='<div style="font-family:monospace;font-size:12px;color:var(--muted);text-align:center;padding:20px 0;">Add moulds above to start tracking.</div>';
+    document.getElementById('moulds-list').innerHTML='<div style="font-family:monospace;font-size:12px;color:var(--muted);text-align:center;padding:20px 0;">Add a mould number above to start tracking.</div>';
     return;
   }
   var ml=document.getElementById('moulds-list');
   ml.innerHTML='';
   mouldEntries.forEach(function(entry){
     var num=entry[0],m=entry[1];
-    var total=m.total||0;
-    var pct=Math.min(100,(total/MOULD_CAPACITY)*100);
-    var isFull=total>=MOULD_CAPACITY-0.001;
-    var remaining=Math.max(0,MOULD_CAPACITY-total);
-    var pourCount=(m.pours||[]).length;
-    var canPour=!isFull&&pourCount<3;
-    var progColor=isFull?'var(--on)':pct>66?'var(--yellow)':'var(--purple)';
+    var hasPour=m.pours&&m.pours.length>0;
+    var pour=hasPour?m.pours[0]:null;
+    var thisSessionTotal=m.total||0;
+
+    // Cumulative total = what was in it before this session + what we added this session
+    var prevTotal=collMouldHistory[num]||0;
+    // prevTotal already includes this session's pour once commitPour fires,
+    // so for display during entry we show prevTotal (before this session) + thisSessionTotal
+    // But after commitPour, history is updated, so we use: max of history vs session total
+    var cumulativeTotal=Math.max(prevTotal, parseFloat((prevTotal+thisSessionTotal).toFixed(3)));
+    // Simpler: history is updated on commit, so prevTotal IS the cumulative after commit
+    // Before any pour this session: prevTotal = history from older sessions
+    // After pour this session: prevTotal = history including this session
+    // So: display total = prevTotal (already includes everything committed)
+    var displayTotal=hasPour?prevTotal:prevTotal; // same either way — history is source of truth
+    var remaining=Math.max(0,parseFloat((MOULD_CAPACITY-displayTotal).toFixed(3)));
+    var pct=Math.min(100,(displayTotal/MOULD_CAPACITY)*100);
+    var isFull=remaining<0.001;
+    var progColor=isFull?'var(--on)':hasPour?'var(--on)':pct>0?'var(--yellow)':'var(--purple)';
+
     var card=document.createElement('div');
-    card.className='mould-card'+(isFull?' full':'');
+    card.className='mould-card'+(isFull||hasPour?' full':'');
     card.id='mould-'+num;
-    var historyHtml=m.pours&&m.pours.length>0?
-      '<div class="mc-history">'+m.pours.map(function(p,pi){
-        return '<div class="mc-history-row"><span>Pour '+(pi+1)+' · '+POUR_LABELS[p.label]+'</span><span>'+p.amount.toFixed(2)+'m³ · '+new Date(p.time).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'})+'</span></div>';
-      }).join('')+'</div>':'';
-    card.innerHTML=
-      '<div class="mc-top"><div><div class="mc-num">'+num+'</div><div class="mc-vol">Pour '+pourCount+'/3 · '+total.toFixed(2)+'/'+MOULD_CAPACITY+'m³</div></div>'+
-      '<div style="text-align:right;">'+(isFull?'<div class="mc-full-badge">✓ FULL</div>':'<div class="mc-total" style="color:var(--purple)">'+remaining.toFixed(2)+'m³ left</div>')+'</div></div>'+
-      '<div class="mc-progress"><div class="mc-progress-bar" style="width:'+pct+'%;background:'+progColor+'"></div></div>'+
-      (canPour?'<div style="font-family:monospace;font-size:10px;color:var(--muted);margin-bottom:8px;letter-spacing:.1em;text-transform:uppercase;">Select amount to pour</div><div class="pour-btns" id="pour-btns-'+num+'"></div>':'<div style="font-family:monospace;font-size:11px;color:'+(isFull?'var(--on)':'var(--muted)')+';">'+(isFull?'✓ Mould is full':'Max 3 pours reached')+'</div>')+
-      historyHtml;
-    // Remove button
-    var rmDiv=document.createElement('div');rmDiv.style.cssText='text-align:right;margin-top:6px;';
-    var rmBtn=document.createElement('button');rmBtn.style.cssText='font-family:monospace;font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer;';
-    rmBtn.textContent='✕ Remove mould';
-    rmBtn.addEventListener('click',(function(n){return function(){removeMould(n);};})(num));
-    rmDiv.appendChild(rmBtn);card.appendChild(rmDiv);
+
+    // Previous history indicator (pours from prior sessions)
+    var prevPoured=hasPour?prevTotal-thisSessionTotal:prevTotal;
+    var prevHistoryHtml='';
+    if(prevPoured>0.001&&!hasPour){
+      prevHistoryHtml='<div style="font-family:monospace;font-size:10px;color:var(--yellow);background:rgba(245,200,66,0.08);border:1px solid rgba(245,200,66,0.2);border-radius:8px;padding:6px 10px;margin-bottom:10px;">'+
+        '⚠ Previously poured: '+prevPoured.toFixed(2)+'m³ · '+remaining.toFixed(2)+'m³ remaining'+
+      '</div>';
+    }
+
+    // Header
+    var statusText=isFull?'✓ FULL':hasPour?'✓ POURED THIS SESSION':'';
+    var headerHtml=
+      '<div class="mc-top">'+
+        '<div>'+
+          '<div class="mc-num">'+num+'</div>'+
+          '<div class="mc-vol">'+
+            (hasPour?POUR_LABELS[pour.label]+' this session · ':'')+
+            displayTotal.toFixed(2)+'/'+MOULD_CAPACITY+'m³ total'+
+          '</div>'+
+        '</div>'+
+        '<div style="text-align:right;">'+
+          (statusText?'<div class="mc-full-badge">'+statusText+'</div>':
+            '<div class="mc-total" style="color:var(--purple)">'+remaining.toFixed(2)+'m³ left</div>')+
+        '</div>'+
+      '</div>'+
+      '<div class="mc-progress"><div class="mc-progress-bar" style="width:'+pct+'%;background:'+progColor+'"></div></div>';
+
+    // Pour section
+    var pourHtml='';
+    if(isFull){
+      pourHtml='<div style="font-family:monospace;font-size:11px;color:var(--on);margin-top:4px;">✓ Mould is full</div>';
+    } else if(hasPour){
+      pourHtml='<div style="font-family:monospace;font-size:11px;color:var(--on);margin-top:4px;">'+
+        '✓ '+POUR_LABELS[pour.label]+' added at '+new Date(pour.time).toLocaleTimeString('en-NZ',{hour:'2-digit',minute:'2-digit'})+
+      '</div>';
+    } else {
+      pourHtml=prevHistoryHtml+
+        '<div style="font-family:monospace;font-size:10px;color:var(--muted);margin-bottom:8px;letter-spacing:.1em;text-transform:uppercase;">Select amount to add</div>'+
+        '<div class="pour-btns" id="pour-btns-'+num+'"></div>';
+    }
+
+    var rmHtml='<div style="text-align:right;margin-top:10px;"><button style="font-family:monospace;font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer;" id="rm-'+num+'">✕ Remove</button></div>';
+
+    card.innerHTML=headerHtml+pourHtml+rmHtml;
     ml.appendChild(card);
-    if(canPour){
+
+    document.getElementById('rm-'+num).addEventListener('click',(function(n){return function(){removeMould(n);};})(num));
+
+    // Wire pour buttons — only valid options given remaining space
+    if(!hasPour&&!isFull){
       var pourBtnsEl=document.getElementById('pour-btns-'+num);
       ['quarter','half','three-quarter','full'].forEach(function(opt){
         var vol=POUR_AMOUNTS[opt];
-        var wouldExceed=(total+vol)>MOULD_CAPACITY+0.001;
-        var isExact=Math.abs((total+vol)-MOULD_CAPACITY)<0.01;
+        var wouldExceed=(displayTotal+vol)>MOULD_CAPACITY+0.001;
         var pb=document.createElement('button');
         pb.className='pour-btn';
         if(wouldExceed)pb.disabled=true;
-        if(isExact)pb.style.cssText='border-color:var(--on);background:var(--on-dim);';
         pb.innerHTML='<div class="pb-icon">'+POUR_LABELS[opt]+'</div><div class="pb-label">'+opt.replace('-',' ')+'</div><div class="pb-vol">'+vol.toFixed(2)+'m³</div>';
-        pb.addEventListener('click',(function(n2,o2){return function(){addPour(n2,o2);};})(num,opt));
+        if(!wouldExceed)pb.addEventListener('click',(function(n2,o2,v2){return function(){showPourConfirm(n2,o2,v2);};})(num,opt,vol));
         pourBtnsEl.appendChild(pb);
       });
     }
   });
+}
+
+// Show confirm sheet before saving the pour
+function showPourConfirm(mouldNum,option,vol){
+  var existing=document.getElementById('pour-confirm-sheet');
+  if(existing)existing.remove();
+  var sheet=document.createElement('div');
+  sheet.id='pour-confirm-sheet';
+  sheet.style.cssText='position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:2px solid var(--purple);padding:24px 24px 40px;z-index:80;border-radius:20px 20px 0 0;box-shadow:0 -8px 40px rgba(0,0,0,0.5);';
+  sheet.innerHTML=
+    '<div style="width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;"></div>'+
+    '<div style="font-family:\'DM Mono\',monospace;font-size:10px;color:var(--purple);letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px;">Confirm Pour</div>'+
+    '<div style="font-size:22px;font-weight:700;color:var(--text);margin-bottom:4px;">'+mouldNum+' — '+POUR_LABELS[option]+'</div>'+
+    '<div style="font-family:\'DM Mono\',monospace;font-size:13px;color:var(--muted);margin-bottom:24px;">'+vol.toFixed(2)+'m³ into mould '+mouldNum+'</div>'+
+    '<div style="display:flex;gap:10px;">'+
+      '<button id="pour-yes" style="flex:1;background:var(--purple);color:#fff;border:none;border-radius:12px;padding:16px;font-family:\'DM Mono\',monospace;font-size:14px;font-weight:700;cursor:pointer;">✓ CONFIRM</button>'+
+      '<button id="pour-no" style="flex:1;background:none;color:var(--muted);border:1px solid var(--border);border-radius:12px;padding:16px;font-family:\'DM Mono\',monospace;font-size:13px;cursor:pointer;">Cancel</button>'+
+    '</div>';
+  document.body.appendChild(sheet);
+  document.getElementById('pour-yes').addEventListener('click',function(){
+    sheet.remove();
+    commitPour(mouldNum,option,vol);
+  });
+  document.getElementById('pour-no').addEventListener('click',function(){sheet.remove();});
+}
+
+function commitPour(mouldNum,option,vol){
+  if(!collMoulds[mouldNum])return;
+  var m=collMoulds[mouldNum];
+  // One pour per mould per session
+  m.pours=[{label:option,amount:vol,time:Date.now()}];
+  m.total=vol;
+  // Cumulative history: previous total + this pour
+  var prevTotal=collMouldHistory[mouldNum]||0;
+  var newTotal=parseFloat((prevTotal+vol).toFixed(3));
+  db.ref('mould_totals/'+mouldNum).set(newTotal);
+  saveMoulds();
+  showToast('✓ '+POUR_LABELS[option]+' recorded for '+mouldNum);
 }
 
 function addMould(){
@@ -1362,20 +1453,20 @@ function addMould(){
   if(n<1||n>800){showToast('⚠ Mould number must be P1–P800');return;}
   if(!collActiveSession){showToast('⚠ Start a collection session first');return;}
   if(collMoulds[num]){showToast('⚠ '+num+' already added');return;}
-  collMoulds[num]={total:0,pours:[]};
-  saveMoulds();input.value='';showToast('✓ Added '+num);
+  // Check if mould is already full from previous sessions
+  var prevTotal=collMouldHistory[num]||0;
+  if(prevTotal>=MOULD_CAPACITY-0.001){showToast('⚠ '+num+' is already full from a previous session');return;}
+  // addedAt used for newest-first sorting
+  collMoulds[num]={total:0,pours:[],addedAt:Date.now()};
+  saveMoulds();input.value='';input.focus();
+  // Show previous history if any
+  if(prevTotal>0){
+    showToast('✓ Added '+num+' — '+prevTotal.toFixed(2)+'m³ already poured');
+  } else {
+    showToast('✓ Added '+num);
+  }
 }
-function addPour(mouldNum,option){
-  if(!collMoulds[mouldNum])return;
-  var m=collMoulds[mouldNum];
-  var amount=POUR_AMOUNTS[option];
-  if((m.total+amount)>MOULD_CAPACITY+0.001){showToast('⚠ Would exceed capacity');return;}
-  if((m.pours||[]).length>=3){showToast('⚠ Max 3 pours per mould');return;}
-  m.total=Math.min(MOULD_CAPACITY,parseFloat((m.total+amount).toFixed(3)));
-  if(!m.pours)m.pours=[];
-  m.pours.push({label:option,amount:amount,time:Date.now()});
-  saveMoulds();showToast('✓ Poured '+option+' into '+mouldNum);
-}
+
 function removeMould(num){
   delete collMoulds[num];saveMoulds();showToast('Removed '+num);
 }
